@@ -53,7 +53,8 @@ DEFAULT_DATA = {
     ],
     "accounts": [],
     "users": {},
-    "orders": []
+    "orders": [],
+    "chats": {}
 }
 
 # ==================== ប្រព័ន្ធរក្សាទុកទិន្នន័យលើ Telegram Cloud ====================
@@ -72,6 +73,7 @@ def sync_from_telegram():
                         raw.setdefault("accounts", [])
                         raw.setdefault("users", {})
                         raw.setdefault("orders", [])
+                        raw.setdefault("chats", {})
                         with open(DATA_FILE, 'w', encoding='utf-8') as f:
                             json.dump(raw, f, ensure_ascii=False, indent=2)
                         return raw
@@ -107,6 +109,7 @@ def load_data():
                 d.setdefault("accounts", [])
                 d.setdefault("users", {})
                 d.setdefault("orders", [])
+                d.setdefault("chats", {})
                 return d
         except:
             pass
@@ -191,7 +194,7 @@ def upload_tg_image():
             file_id = res["result"]["photo"][-1]["file_id"]
             return jsonify({"success": True, "file_id": file_id})
         else:
-            return jsonify({"success": False, "error": res.get("description", "Telegram Upload Failed")}), 500
+            return jsonify({"success": False, "error": res.get("description", "Upload Failed")}), 500
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -200,14 +203,167 @@ def serve_tg_image(file_id):
     try:
         info_res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getFile?file_id={file_id}", timeout=10).json()
         if not info_res.get("ok"):
-            return "Image not found", 404
+            return "File not found", 404
         file_path = info_res["result"]["file_path"]
         file_url = f"https://api.telegram.org/file/bot{TG_BOT_TOKEN}/{file_path}"
         img_res = requests.get(file_url, timeout=15)
-        return Response(img_res.content, mimetype=img_res.headers.get('Content-Type', 'image/jpeg'))
+        return Response(img_res.content, mimetype=img_res.headers.get('Content-Type', 'application/octet-stream'))
     except Exception as e:
         return str(e), 500
 
+# ==================== ប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Website-Only Live Chat) ====================
+@app.route('/api/chat/send', methods=['POST'])
+def chat_send():
+    # គាំទ្រទាំង FormData (សម្រាប់រូបភាព និងសំឡេង) និង JSON (សម្រាប់អក្សរ)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        room_id = str(request.form.get("room_id", "")).strip()
+        sender_id = str(request.form.get("sender_id", "")).strip()
+        sender_name = str(request.form.get("sender_name", "User")).strip()
+        sender_username = str(request.form.get("sender_username", "")).strip()
+        sender_photo = str(request.form.get("sender_photo", "")).strip()
+        is_admin = request.form.get("is_admin") == "true"
+        msg_type = str(request.form.get("msg_type", "text")).strip()
+        text = str(request.form.get("text", "")).strip()
+    else:
+        payload = request.get_json(silent=True) or {}
+        room_id = str(payload.get("room_id", "")).strip()
+        sender_id = str(payload.get("sender_id", "")).strip()
+        sender_name = str(payload.get("sender_name", "User")).strip()
+        sender_username = str(payload.get("sender_username", "")).strip()
+        sender_photo = str(payload.get("sender_photo", "")).strip()
+        is_admin = bool(payload.get("is_admin", False))
+        msg_type = str(payload.get("msg_type", "text")).strip()
+        text = str(payload.get("text", "")).strip()
+
+    if not room_id or not sender_id:
+        return jsonify({"success": False, "error": "Missing user info"}), 400
+
+    file_id = ""
+    if msg_type in ["image", "voice"] and 'media' in request.files:
+        media_file = request.files['media']
+        try:
+            # ផ្ទុកឯកសារសំឡេង/រូបភាពក្នុង Cloud Storage ដោយស្ងៀមស្ងាត់ (មិនបង្ហាញជាសារជូនដំណឹង Telegram ឡើយ)
+            endpoint = "sendPhoto" if msg_type == "image" else "sendDocument"
+            field_name = "photo" if msg_type == "image" else "document"
+            res = requests.post(
+                f"https://api.telegram.org/bot{TG_BOT_TOKEN}/{endpoint}",
+                files={field_name: (media_file.filename, media_file.stream, media_file.mimetype)},
+                data={'chat_id': TG_GROUP_ID, 'disable_notification': True},
+                timeout=20
+            ).json()
+            if res.get("ok"):
+                if msg_type == "image":
+                    file_id = res["result"]["photo"][-1]["file_id"]
+                else:
+                    file_id = res["result"]["document"]["file_id"]
+            else:
+                return jsonify({"success": False, "error": "មិនអាចផ្ទុកឯកសារបានទេ!"}), 500
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    if msg_type == "text" and not text:
+        return jsonify({"success": False, "error": "Empty message"}), 400
+
+    d = load_data()
+    chats = d.setdefault("chats", {})
+    if room_id not in chats:
+        chats[room_id] = {
+            "user_id": room_id,
+            "user_name": sender_name if not is_admin else "Customer",
+            "user_username": sender_username if not is_admin else "",
+            "user_photo": sender_photo if not is_admin else "",
+            "unread_admin": 0,
+            "unread_user": 0,
+            "messages": []
+        }
+
+    room = chats[room_id]
+    if not is_admin:
+        room["user_name"] = sender_name
+        room["user_username"] = sender_username
+        if sender_photo:
+            room["user_photo"] = sender_photo
+        room["unread_admin"] = room.get("unread_admin", 0) + 1
+    else:
+        room["unread_user"] = room.get("unread_user", 0) + 1
+
+    msg_obj = {
+        "id": f"m_{int(time.time()*1000)}",
+        "sender_id": sender_id,
+        "sender_name": sender_name,
+        "sender_photo": sender_photo,
+        "is_admin": is_admin,
+        "type": msg_type,
+        "text": text,
+        "file_id": file_id,
+        "time": time.strftime("%H:%M")
+    }
+    room["messages"].append(msg_obj)
+    # រក្សាទុកសារចុងក្រោយ 150 សារក្នុងមួយបន្ទប់ឆាត ដើម្បីឱ្យដើរលឿន
+    if len(room["messages"]) > 150:
+        room["messages"] = room["messages"][-150:]
+
+    save_data(d, sync_cloud=True)
+    return jsonify({"success": True, "message": msg_obj})
+
+@app.route('/api/chat/room', methods=['POST'])
+def chat_get_room():
+    payload = request.get_json(silent=True) or {}
+    room_id = str(payload.get("room_id", "")).strip()
+    viewer_is_admin = bool(payload.get("is_admin", False))
+    d = load_data()
+    room = d.get("chats", {}).get(room_id)
+    if not room:
+        return jsonify({"success": True, "messages": [], "unread_user": 0})
+
+    changed = False
+    if viewer_is_admin and room.get("unread_admin", 0) > 0:
+        room["unread_admin"] = 0
+        changed = True
+    elif not viewer_is_admin and room.get("unread_user", 0) > 0:
+        room["unread_user"] = 0
+        changed = True
+
+    if changed:
+        save_data(d, sync_cloud=False)
+
+    return jsonify({
+        "success": True,
+        "messages": room.get("messages", []),
+        "unread_user": room.get("unread_user", 0)
+    })
+
+@app.route('/api/chat/admin/rooms', methods=['POST'])
+def chat_admin_rooms():
+    d = load_data()
+    chats = d.get("chats", {})
+    rooms_list = []
+    total_unread = 0
+    for r_id, r_data in chats.items():
+        msgs = r_data.get("messages", [])
+        last_msg = msgs[-1] if msgs else None
+        last_preview = ""
+        if last_msg:
+            if last_msg["type"] == "text":
+                last_preview = last_msg["text"]
+            elif last_msg["type"] == "image":
+                last_preview = "🖼️ បានផ្ញើរូបភាព"
+            elif last_msg["type"] == "voice":
+                last_preview = "🎤 សារសំឡេង"
+        unread = r_data.get("unread_admin", 0)
+        total_unread += unread
+        rooms_list.append({
+            "room_id": r_id,
+            "user_name": r_data.get("user_name", "User"),
+            "user_username": r_data.get("user_username", ""),
+            "user_photo": r_data.get("user_photo", ""),
+            "unread_admin": unread,
+            "last_preview": last_preview,
+            "last_time": last_msg["time"] if last_msg else ""
+        })
+    return jsonify({"success": True, "rooms": list(reversed(rooms_list)), "total_unread": total_unread})
+
+# ==================== ការគ្រប់គ្រងគណនីហ្គេម & ការទូទាត់ KHQR ====================
 @app.route('/api/admin/accounts', methods=['POST'])
 def get_admin_accounts():
     d = load_data()
@@ -314,7 +470,6 @@ def update_store():
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Invalid data"}), 400
 
-# បង្កើត One-Time Dynamic KHQR (បង់បានតែម្តងគត់ក្នុងមួយ QR ការពារសុវត្ថិភាព ១០០%)
 @app.route('/api/create-order', methods=['POST'])
 def create_order():
     data = request.get_json(silent=True) or {}
@@ -348,7 +503,6 @@ def create_order():
         return jsonify({"success": False, "error": "តម្លៃមិនត្រឹមត្រូវ!"}), 400
 
     try:
-        # បង្កើតលេខសម្គាល់តែមួយគត់ (Unique Bill + Nonce) ដើម្បីឱ្យ KHQR នីមួយៗខុសគ្នាដាច់ស្រឡះ
         unique_nonce = uuid.uuid4().hex[:6].upper()
         bill_no = f"KTY-{int(time.time())}-{unique_nonce}"
         
@@ -397,7 +551,6 @@ def create_order():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# ផ្ទៀងផ្ទាត់ការបង់ប្រាក់ (KHQR មួយប្រើបានតែម្តងគត់ និងផុតកំណត់ក្នុង 5 នាទី)
 @app.route('/api/check-payment', methods=['POST'])
 def check_payment():
     data = request.get_json(silent=True) or {}
@@ -410,11 +563,9 @@ def check_payment():
     if not order:
         return jsonify({"success": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
 
-    # ប្រសិនបើ KHQR នេះត្រូវបានប្រើរួចហើយ (Used / PAID) មិនអនុញ្ញាតឱ្យប្រើម្តងទៀតទេ
     if order.get("status") == "PAID" or order.get("used"):
         return jsonify({"success": True, "status": "PAID", "order": order})
 
-    # ពិនិត្យសុពលភាព KHQR (ផុតកំណត់ក្រោយ 5 នាទី = 300 វិនាទី)
     if time.time() - order.get("created_ts", 0) > 300:
         order["status"] = "EXPIRED"
         order["used"] = True
@@ -424,7 +575,6 @@ def check_payment():
     try:
         status = khqr.check_payment(md5_hash)
         if status == "PAID":
-            # ចាក់សោ KHQR នេះភ្លាមៗកុំឱ្យប្រើម្តងទៀតបាន (Single-Use Lock)
             order["status"] = "PAID"
             order["used"] = True
             order["paid_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -437,7 +587,6 @@ def check_payment():
                     if acc["stock"] > 0:
                         acc["stock"] -= 1
 
-            # រក្សាទុកប្រវត្តិការទិញ និងព័ត៌មានគណនីចូល Telegram Cloud ភ្លាមៗ
             save_data(d, sync_cloud=True)
 
             if order["tg_id"] == "GUEST":
