@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KTY TOPUP STORE - ហាងបញ្ចូលកញ្ចប់ហ្គេម</title>
+    <title>KTY TOPUP STORE - ហាងបញ្ចូលកញ្ចប់ហ្គេម និងលក់គណនី</title>
+    <link rel="icon" type="image/png" href="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -35,11 +36,12 @@
             cursor: pointer;
         }
         .brand img {
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 10px;
             object-fit: cover;
             background: #1e293b;
+            border: 1px solid #334155;
         }
         .tg-btn {
             background: #54a9eb;
@@ -54,18 +56,10 @@
             align-items: center;
             gap: 6px;
         }
-        .tg-btn img {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
+        .tg-btn img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
         .container { max-width: 600px; margin: 0 auto; padding: 16px; }
 
-        /* Page Transition Animation */
-        .page-view {
-            animation: fadeIn 0.25s ease-out;
-        }
+        .page-view { animation: fadeIn 0.25s ease-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
@@ -118,11 +112,12 @@
             font-weight: bold;
         }
 
-        /* Games Grid (Home Page) */
+        /* Games Grid */
         .games-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 12px;
+            margin-bottom: 26px;
         }
         .game-card {
             background: #131b2e;
@@ -142,16 +137,90 @@
             object-fit: cover;
             margin-bottom: 8px;
             background: #0f172a;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .game-name { font-size: 13px; font-weight: bold; color: #f1f5f9; }
 
-        /* Page 2: Game Detail Header */
-        .back-bar {
-            display: flex;
-            align-items: center;
-            margin-bottom: 14px;
+        /* Game Accounts Grid (ខាងក្រោមបញ្ជីហ្គេម) */
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
         }
+        .acc-card {
+            background: #131b2e;
+            border: 1px solid #26334d;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .acc-card:hover { border-color: #fbbf24; }
+        .acc-thumb-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            background: #090d16;
+        }
+        .acc-thumb-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .acc-game-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #38bdf8;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+        .acc-photo-count {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+        .acc-body { padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .acc-title { font-size: 13px; font-weight: bold; color: #f8fafc; margin-bottom: 6px; line-height: 1.3; }
+        .acc-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+        .acc-price { font-size: 15px; font-weight: 800; color: #fbbf24; }
+        .acc-stock { font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: bold; }
+        .stock-in { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .stock-out { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        /* Account Detail Carousel (អូសមើលរូប 10 សន្លឹក) */
+        .acc-gallery {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 10px;
+            border-radius: 16px;
+            margin-bottom: 14px;
+            padding-bottom: 6px;
+        }
+        .acc-gallery img {
+            width: 100%;
+            max-height: 240px;
+            flex-shrink: 0;
+            scroll-snap-align: center;
+            border-radius: 14px;
+            object-fit: cover;
+            border: 1px solid #334155;
+            background: #090d16;
+        }
+
+        /* Page 2: Game Detail Header */
+        .back-bar { display: flex; align-items: center; margin-bottom: 14px; }
         .btn-back {
             background: #1e293b;
             color: #e2e8f0;
@@ -174,34 +243,11 @@
             align-items: center;
             gap: 14px;
             margin-bottom: 16px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
         }
-        .game-hero img {
-            width: 76px;
-            height: 76px;
-            border-radius: 16px;
-            object-fit: cover;
-            border: 2px solid #38bdf8;
-            background: #090d16;
-        }
-        .game-hero-info h2 {
-            font-size: 20px;
-            color: #fff;
-            margin-bottom: 6px;
-        }
-        .game-badges {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .badge-tag {
-            background: rgba(56, 189, 248, 0.15);
-            color: #38bdf8;
-            font-size: 11px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-weight: bold;
-        }
+        .game-hero img { width: 76px; height: 76px; border-radius: 16px; object-fit: cover; border: 2px solid #38bdf8; }
+        .game-hero-info h2 { font-size: 20px; color: #fff; margin-bottom: 6px; }
+        .game-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+        .badge-tag { background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 11px; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
 
         /* Boxes & Inputs */
         .box {
@@ -224,15 +270,7 @@
             outline: none;
         }
         input:focus { border-color: #38bdf8; }
-        .note-text {
-            font-size: 12px;
-            color: #94a3b8;
-            background: rgba(15, 23, 42, 0.8);
-            padding: 10px 12px;
-            border-radius: 10px;
-            margin-top: 8px;
-            line-height: 1.4;
-        }
+        .note-text { font-size: 12px; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 10px; margin-top: 8px; line-height: 1.4; }
 
         /* Items Grid */
         .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -245,20 +283,19 @@
             align-items: center;
             gap: 10px;
             cursor: pointer;
-            transition: 0.15s;
         }
-        .item-card.active {
-            border-color: #fbbf24;
-            background: rgba(251, 191, 36, 0.12);
-        }
+        .item-card.active { border-color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
         .item-card img { width: 42px; height: 42px; border-radius: 8px; object-fit: contain; }
         .item-name { font-size: 13px; font-weight: bold; color: #fff; }
         .item-price { font-size: 15px; font-weight: bold; color: #fbbf24; margin-top: 3px; }
 
         .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; }
-        .btn-buy { background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); }
+        .btn-buy { background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; }
+        .btn-buy:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
         .btn-admin { background: #f59e0b; color: #000; padding: 8px 12px; font-size: 13px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-danger { background: #ef4444; color: #fff; padding: 4px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
+        .btn-edit { background: #0284c7; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
+        .btn-danger { background: #ef4444; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
+        .btn-cancel { background: #475569; color: #fff; padding: 10px; font-size: 13px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
 
         /* Admin Panel */
         #adminPanel {
@@ -269,13 +306,73 @@
             padding: 16px;
             margin-bottom: 20px;
         }
-        .admin-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-        .tab-btn { flex: 1; min-width: 75px; padding: 8px 4px; background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .admin-tabs { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; }
+        .tab-btn { flex: 1; min-width: 65px; padding: 8px 4px; background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 11px; }
         .tab-btn.active { background: #f59e0b; color: #000; border-color: #f59e0b; }
         .admin-sec { display: none; }
         .admin-sec.active { display: block; }
-        .list-row { display: flex; justify-content: space-between; align-items: center; background: #090d16; padding: 8px 10px; border-radius: 8px; margin-top: 8px; font-size: 13px; }
+        .list-row { display: flex; justify-content: space-between; align-items: center; background: #090d16; padding: 8px 10px; border-radius: 8px; margin-top: 8px; font-size: 13px; gap: 8px; }
+        .row-actions { display: flex; gap: 6px; flex-shrink: 0; }
         .switch-row { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+
+        /* Preview Uploaded Photos in Admin */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .preview-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #38bdf8;
+        }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-del {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        /* Credential Box (បង្ហាញ Gmail & Password ក្រោយបង់ប្រាក់រួច) */
+        .cred-box {
+            background: #090d16;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 12px 0;
+            text-align: left;
+        }
+        .cred-field {
+            background: #131b2e;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        .copy-btn {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: bold;
+        }
 
         /* Modals */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); justify-content: center; align-items: center; padding: 16px; z-index: 100; }
@@ -298,15 +395,13 @@
         .pulse-dot { width: 10px; height: 10px; background: #38bdf8; border-radius: 50%; animation: pulse 1.2s infinite; }
         @keyframes pulse { 0% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.4; } 100% { transform: scale(0.9); opacity: 1; } }
 
-        .success-card { animation: popIn 0.4s ease-out; }
-        @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .check-circle {
-            width: 72px; height: 72px; background: linear-gradient(135deg, #10b981, #059669);
+            width: 68px; height: 68px; background: linear-gradient(135deg, #10b981, #059669);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 14px; font-size: 36px; color: #fff; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+            margin: 0 auto 12px; font-size: 34px; color: #fff;
         }
-        .receipt-box { background: #0f172a; border: 1px dashed #334155; border-radius: 12px; padding: 14px; margin: 16px 0; text-align: left; font-size: 13px; }
-        .receipt-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.4); }
+        .receipt-box { background: #0f172a; border: 1px dashed #334155; border-radius: 12px; padding: 12px; margin: 12px 0; text-align: left; font-size: 12px; }
+        .receipt-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.4); }
         .receipt-row:last-child { border-bottom: none; }
     </style>
 </head>
@@ -314,7 +409,7 @@
 
 <div class="navbar">
     <div class="brand" onclick="goHomePage()">
-        <img src="https://cdn-icons-png.flaticon.com/512/686/686589.png" alt="Logo">
+        <img src="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png" alt="KTY Logo">
         <span>KTY STORE</span>
     </div>
     <div id="authArea">
@@ -334,21 +429,28 @@
                 <button class="tab-btn active" onclick="switchAdminTab('tabBanner', this)">🖼️ Banner</button>
                 <button class="tab-btn" onclick="switchAdminTab('tabGame', this)">🎮 ហ្គេម</button>
                 <button class="tab-btn" onclick="switchAdminTab('tabItem', this)">💎 Item</button>
-                <button class="tab-btn" onclick="switchAdminTab('tabOrders', this); loadAdminOrders();">📜 ប្រវត្តិទិញ</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabAcc', this); loadAdminAccounts();">🔐 លក់គណនី</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabOrders', this); loadAdminOrders();">📜 ប្រវត្តិ</button>
             </div>
 
+            <!-- 1. គ្រប់គ្រង Banner -->
             <div id="tabBanner" class="admin-sec active">
                 <div class="input-group">
-                    <label>ដាក់ Link រូបភាព Banner (ទំហំ 16:9)</label>
+                    <label id="bannerFormLabel">ដាក់ Link រូបភាព Banner (ទំហំ 16:9)</label>
                     <div style="display:flex; gap:8px;">
                         <input type="text" id="newBannerUrl" placeholder="https://example.com/banner.jpg">
-                        <button class="btn-admin" onclick="addBanner()">បន្ថែម</button>
+                        <button class="btn-admin" id="bannerSaveBtn" onclick="saveBanner()">បន្ថែម</button>
+                        <button class="btn-cancel" id="bannerCancelBtn" style="display:none; padding:8px 10px;" onclick="cancelEditBanner()">បោះបង់</button>
                     </div>
                 </div>
                 <div id="adminBannerList"></div>
             </div>
 
+            <!-- 2. គ្រប់គ្រងហ្គេម -->
             <div id="tabGame" class="admin-sec">
+                <div id="gameEditBanner" style="display:none; background:rgba(2,132,199,0.2); border:1px solid #38bdf8; color:#38bdf8; padding:8px 10px; border-radius:8px; font-size:12px; margin-bottom:10px; font-weight:bold;">
+                    ✏️ កំពុងកែសម្រួលព័ត៌មានហ្គេម...
+                </div>
                 <div class="input-group">
                     <label>ឈ្មោះហ្គេម (ឧ. MLBB KH, Free Fire, Roblox)</label>
                     <input type="text" id="newGameName" placeholder="បញ្ចូលឈ្មោះហ្គេម...">
@@ -377,11 +479,18 @@
                     <label>អក្សរណែនាំខាងក្រោមប្រអប់បំពេញព័ត៌មាន</label>
                     <textarea id="inNote" rows="2" placeholder="សរសេរព័ត៌មានណែនាំអតិថិជន..."></textarea>
                 </div>
-                <button class="btn-admin" style="width:100%; padding:10px;" onclick="addGame()">+ បង្ហោះហ្គេមថ្មី</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-admin" id="gameSaveBtn" style="flex:1; padding:10px;" onclick="saveGame()">+ បង្ហោះហ្គេមថ្មី</button>
+                    <button class="btn-cancel" id="gameCancelBtn" style="display:none;" onclick="cancelEditGame()">បោះបង់</button>
+                </div>
                 <div id="adminGameList" style="margin-top:12px;"></div>
             </div>
 
+            <!-- 3. គ្រប់គ្រងកញ្ចប់ Item -->
             <div id="tabItem" class="admin-sec">
+                <div id="itemEditBanner" style="display:none; background:rgba(2,132,199,0.2); border:1px solid #38bdf8; color:#38bdf8; padding:8px 10px; border-radius:8px; font-size:12px; margin-bottom:10px; font-weight:bold;">
+                    ✏️ កំពុងកែសម្រួលកញ្ចប់ Item...
+                </div>
                 <div class="input-group">
                     <label>ជ្រើសរើសហ្គេមសម្រាប់ដាក់ Item នេះ</label>
                     <select id="itemGameSelect"></select>
@@ -398,10 +507,76 @@
                     <label>Link រូបភាព Item</label>
                     <input type="text" id="newItemImg" placeholder="https://...">
                 </div>
-                <button class="btn-admin" style="width:100%; padding:10px;" onclick="addItem()">+ បង្ហោះកញ្ចប់ Item</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-admin" id="itemSaveBtn" style="flex:1; padding:10px;" onclick="saveItem()">+ បង្ហោះកញ្ចប់ Item</button>
+                    <button class="btn-cancel" id="itemCancelBtn" style="display:none;" onclick="cancelEditItem()">បោះបង់</button>
+                </div>
                 <div id="adminItemList" style="margin-top:12px;"></div>
             </div>
 
+            <!-- 4. គ្រប់គ្រងគណនីហ្គេមសម្រាប់លក់ (ផ្ទុករូបភាពលើ Telegram Cloud) -->
+            <div id="tabAcc" class="admin-sec">
+                <div id="accEditBanner" style="display:none; background:rgba(2,132,199,0.2); border:1px solid #38bdf8; color:#38bdf8; padding:8px 10px; border-radius:8px; font-size:12px; margin-bottom:10px; font-weight:bold;">
+                    ✏️ កំពុងកែសម្រួលគណនីហ្គេម...
+                </div>
+                <div class="input-group">
+                    <label>ជ្រើសរើសប្រភេទហ្គេម (ឧ. Roblox, MLBB, Free Fire)</label>
+                    <input type="text" id="accGameName" list="gameSuggestions" placeholder="វាយឈ្មោះហ្គេម ឬជ្រើសរើស...">
+                    <datalist id="gameSuggestions">
+                        <option value="Roblox">
+                        <option value="MLBB">
+                        <option value="Free Fire">
+                        <option value="PUBG Mobile">
+                    </datalist>
+                </div>
+                <div class="input-group">
+                    <label>ឈ្មោះគណនី / ចំណងជើងលក់</label>
+                    <input type="text" id="accTitle" placeholder="ឧទាហរណ៍៖ គណនី Blox Fruits Max Level + Kitsune">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div class="input-group">
+                        <label>តម្លៃ ($ USD)</label>
+                        <input type="number" step="0.01" id="accPrice" placeholder="ឧ. 5.00">
+                    </div>
+                    <div class="input-group">
+                        <label>ចំនួនស្តុក</label>
+                        <input type="number" id="accStock" value="1" min="0">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>ព័ត៌មានលម្អិតអំពីគណនី</label>
+                    <textarea id="accDesc" rows="2" placeholder="រៀបរាប់ពី Skin, Level, ឬចំណុចពិសេសនៃគណនី..."></textarea>
+                </div>
+
+                <!-- ប្រអប់សម្ងាត់ប្រគល់ជូនភ្ញៀវក្រោយបង់ប្រាក់រួច -->
+                <div style="background:#0f172a; border:1px dashed #10b981; padding:10px; border-radius:10px; margin-bottom:12px;">
+                    <div style="font-size:12px; color:#10b981; font-weight:bold; margin-bottom:8px;">🔒 ព័ត៌មានគណនីសម្រាប់ប្រគល់ជូនភ្ញៀវភ្លាមៗពេលបង់ប្រាក់រួច៖</div>
+                    <div class="input-group" style="margin-bottom:8px;">
+                        <label>Gmail ឬ Username គណនីហ្គេម</label>
+                        <input type="text" id="accLogin" placeholder="បញ្ចូល Gmail ឬ Username...">
+                    </div>
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label>ពាក្យសម្ងាត់ (Password)</label>
+                        <input type="text" id="accPassword" placeholder="បញ្ចូល Password គណនី...">
+                    </div>
+                </div>
+
+                <!-- Upload រូបភាពរហូតដល់ 10 រូប ទៅ Telegram Cloud -->
+                <div class="input-group">
+                    <label>Upload រូបភាពគណនី (អតិបរមា ១០ រូប - ផ្ទុកលើ Telegram)</label>
+                    <input type="file" id="accPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this)" style="background:#090d16; padding:8px; border-radius:8px; width:100%; color:#cbd5e1;">
+                    <div id="uploadProgressText" style="font-size:12px; color:#38bdf8; margin-top:4px;"></div>
+                    <div class="preview-grid" id="accPhotoPreview"></div>
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-admin" id="accSaveBtn" style="flex:1; padding:10px;" onclick="saveAccountPost()">+ បង្ហោះលក់គណនី</button>
+                    <button class="btn-cancel" id="accCancelBtn" style="display:none;" onclick="cancelEditAccount()">បោះបង់</button>
+                </div>
+                <div id="adminAccList" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- 5. ប្រវត្តិការទិញទាំងអស់ -->
             <div id="tabOrders" class="admin-sec">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-size:13px; color:#cbd5e1; font-weight:bold;">បញ្ជីការបញ្ជាទិញទាំងអស់</span>
@@ -416,15 +591,21 @@
             <div class="banner-dots" id="bannerDots"></div>
         </div>
 
-        <!-- បញ្ជីហ្គេម -->
-        <div class="sec-title">🎮 ជ្រើសរើសហ្គេម</div>
+        <!-- ផ្នែកទី ១៖ បញ្ជីហ្គេមសម្រាប់ Topup Item -->
+        <div class="sec-title">🎮 ជ្រើសរើសហ្គេម (Top-up Item)</div>
         <div class="games-grid" id="gamesGrid"></div>
+
+        <!-- ផ្នែកទី ២៖ បញ្ជីគណនីហ្គេមដែលដាក់លក់ (នៅខាងក្រោមហ្គេម) -->
+        <div id="accountsHomeSection" style="display:none;">
+            <div class="sec-title">🔐 គណនីហ្គេមដាក់លក់ (ទិញភ្លាមបានលេងភ្លាម)</div>
+            <div class="accounts-grid" id="accountsGrid"></div>
+        </div>
     </div>
 
-    <!-- ==================== ទំព័រទី ២៖ ទំព័រទិញកញ្ចប់ហ្គេម (GAME TOPUP PAGE) ==================== -->
+    <!-- ==================== ទំព័រទី ២៖ ទំព័រទិញកញ្ចប់ Item ហ្គេម ==================== -->
     <div id="gameDetailView" class="page-view" style="display:none;">
         <div class="back-bar">
-            <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅជ្រើសរើសហ្គេម</button>
+            <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
         </div>
 
         <div class="game-hero">
@@ -455,8 +636,34 @@
                 <span style="color:#94a3b8; font-size:14px;">ត្រូវទូទាត់សរុប៖</span>
                 <span id="checkoutSummary" style="font-weight:bold; font-size:16px; color:#fbbf24;">$0.00</span>
             </div>
-            <button class="btn btn-buy" id="payBtn" onclick="createOrder()">ទូទាត់ប្រាក់តាម KHQR</button>
+            <button class="btn btn-buy" id="payBtn" onclick="createItemOrder()">ទូទាត់ប្រាក់តាម KHQR</button>
             <div id="orderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
+        </div>
+    </div>
+
+    <!-- ==================== ទំព័រទី ៣៖ ទំព័រព័ត៌មានគណនីហ្គេម (អូសមើលរូប & ទិញ) ==================== -->
+    <div id="accountDetailView" class="page-view" style="display:none;">
+        <div class="back-bar">
+            <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
+        </div>
+
+        <!-- អូសមើលរូបភាពគណនីតាមចិត្ត -->
+        <div class="acc-gallery" id="accDetailGallery"></div>
+        <div style="text-align:center; font-size:11px; color:#94a3b8; margin-bottom:12px;">👈 អូសឆ្វេង-ស្តាំ ដើម្បីមើលរូបភាពទាំងអស់ 👉</div>
+
+        <div class="box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span id="accDetailGame" class="badge-tag">GAME</span>
+                <span id="accDetailStock" class="acc-stock stock-in">នៅសល់: 1</span>
+            </div>
+            <h2 id="accDetailTitle" style="font-size:19px; color:#fff; margin-bottom:8px;">Account Title</h2>
+            <div id="accDetailPrice" style="font-size:22px; font-weight:800; color:#fbbf24; margin-bottom:12px;">$0.00</div>
+            
+            <div style="font-size:13px; color:#cbd5e1; font-weight:bold; margin-bottom:4px;">📋 ព័ត៌មានលម្អិត៖</div>
+            <div id="accDetailDesc" class="note-text" style="margin-top:0; margin-bottom:16px; white-space:pre-line;"></div>
+
+            <button class="btn btn-buy" id="buyAccBtn" onclick="createAccountOrder()">ទិញគណនីនេះឥឡូវនេះ (KHQR)</button>
+            <div id="accOrderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
         </div>
     </div>
 </div>
@@ -465,7 +672,7 @@
 <div class="modal" id="loginModal">
     <div class="modal-box">
         <h3 style="margin-bottom:8px;">✈️ ចុះឈ្មោះតាមគណនី Telegram</h3>
-        <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">ចុះឈ្មោះដើម្បីងាយស្រួលពិនិត្យមើលប្រវត្តិការទិញរបស់អ្នក</p>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">ចុះឈ្មោះដើម្បីងាយស្រួលពិនិត្យមើលប្រវត្តិការទិញ និងគណនីហ្គេមដែលបានទិញ</p>
         <div id="tgWidgetContainer" style="min-height:48px; display:flex; justify-content:center; align-items:center; margin-bottom:10px;"></div>
         <div id="loginError" style="color:#f43f5e; font-size:12px; margin-top:8px;"></div>
         <button style="background:none; border:none; color:#94a3b8; margin-top:12px; cursor:pointer;" onclick="closeModal('loginModal')">បិទ</button>
@@ -478,13 +685,13 @@
         <h3 id="profileTitle" style="margin-bottom:4px;">គណនីរបស់ខ្ញុំ</h3>
         <div id="profileSub" style="font-size:12px; color:#94a3b8; margin-bottom:14px;"></div>
         <div style="text-align:left; font-weight:bold; font-size:14px; margin-bottom:8px; color:#38bdf8;">📜 ប្រវត្តិការទិញរបស់អ្នក៖</div>
-        <div id="orderHistoryList" style="max-height:250px; overflow-y:auto; margin-bottom:14px;"></div>
+        <div id="orderHistoryList" style="max-height:280px; overflow-y:auto; margin-bottom:14px;"></div>
         <button class="btn-danger" style="width:100%; padding:10px; font-size:14px;" onclick="logoutTelegram()">ចាកចេញពីគណនី</button>
         <button style="background:none; border:none; color:#94a3b8; margin-top:12px; cursor:pointer;" onclick="closeModal('profileModal')">បិទ</button>
     </div>
 </div>
 
-<!-- Modal បង្ហាញ KHQR និង ផ្ទាំងអរគុណស្វ័យប្រវត្តិ -->
+<!-- Modal បង្ហាញ KHQR និង ទំព័រទទួលព័ត៌មានគណនីភ្លាមៗ -->
 <div class="modal" id="qrModal">
     <div class="modal-box">
         <div id="qrView">
@@ -503,11 +710,31 @@
             <button style="background:none; border:none; color:#94a3b8; margin-top:14px; cursor:pointer; text-decoration:underline;" onclick="closeQrModal()">បោះបង់ / បិទផ្ទាំងនេះ</button>
         </div>
 
-        <div id="thankYouView" class="success-card" style="display:none;">
+        <!-- ទំព័រអរគុណ + បង្ហាញ Gmail & Password ភ្លាមៗប្រសិនបើទិញគណនីហ្គេម -->
+        <div id="thankYouView" style="display:none;">
             <div class="check-circle">✓</div>
             <h2 style="color:#10b981; font-size:20px; margin-bottom:6px;">ការទូទាត់ជោគជ័យ!</h2>
-            <p style="font-size:13px; color:#cbd5e1; line-height:1.5;">សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY TOPUP STORE</b>។ ប្រព័ន្ធបានបញ្ជូនព័ត៌មានទៅក្រុមការងារដើម្បីដំណើរការជូនអ្នកភ្លាមៗ!</p>
+            <p id="thankYouSubText" style="font-size:13px; color:#cbd5e1; line-height:1.4;">សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY TOPUP STORE</b>។</p>
             
+            <!-- ប្រអប់បង្ហាញព័ត៌មានគណនីហ្គេមភ្លាមៗ -->
+            <div id="deliveredAccountBox" class="cred-box" style="display:none;">
+                <div style="font-size:12px; color:#10b981; font-weight:bold;">🎉 ព័ត៌មានគណនីហ្គេមរបស់អ្នក (ចម្លងចូលលេងភ្លាម)៖</div>
+                <div class="cred-field">
+                    <div>
+                        <div style="font-size:10px; color:#94a3b8;">Gmail / Username:</div>
+                        <b id="delivLogin" style="color:#fff;"></b>
+                    </div>
+                    <button class="copy-btn" onclick="copyText('delivLogin')">ចម្លង</button>
+                </div>
+                <div class="cred-field">
+                    <div>
+                        <div style="font-size:10px; color:#94a3b8;">Password:</div>
+                        <b id="delivPass" style="color:#fbbf24;"></b>
+                    </div>
+                    <button class="copy-btn" onclick="copyText('delivPass')">ចម្លង</button>
+                </div>
+            </div>
+
             <div class="receipt-box">
                 <div class="receipt-row">
                     <span style="color:#94a3b8;">វិក្កយបត្រ៖</span>
@@ -518,10 +745,10 @@
                     <span id="recGame" style="font-weight:bold;"></span>
                 </div>
                 <div class="receipt-row">
-                    <span style="color:#94a3b8;">កញ្ចប់ Item៖</span>
+                    <span style="color:#94a3b8;">ផលិតផល៖</span>
                     <span id="recItem" style="font-weight:bold;"></span>
                 </div>
-                <div class="receipt-row">
+                <div class="receipt-row" id="recPlayerRow">
                     <span style="color:#94a3b8;">គណនីហ្គេម៖</span>
                     <span id="recPlayer" style="font-weight:bold; color:#fbbf24;"></span>
                 </div>
@@ -537,50 +764,31 @@
 </div>
 
 <script>
-    // ភ្ជាប់ទៅកាន់ Server Render របស់អ្នកដោយផ្ទាល់ (Run 24/7)
     const API_URL = "https://kty-store.onrender.com";
     const BOT_USERNAME = "KTYlogin_bot";
+    const DEFAULT_GAME_ICON = "https://cdn-icons-png.flaticon.com/512/686/686589.png";
+    const DEFAULT_ITEM_ICON = "https://cdn-icons-png.flaticon.com/512/616/616490.png";
 
-    let storeData = {
-        banners: [
-            "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1280&q=80",
-            "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1280&q=80"
-        ],
-        games: [
-            {
-                id: "game_1",
-                name: "Roblox",
-                image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Roblox_player_icon_black.svg/512px-Roblox_player_icon_black.svg.png",
-                input1_enabled: true,
-                input1_label: "Roblox Username",
-                input1_placeholder: "បញ្ចូលឈ្មោះគណនី Roblox...",
-                input2_enabled: false,
-                input2_label: "",
-                input2_placeholder: "",
-                input_note: "⚠️ សូមពិនិត្យ Username ឱ្យបានត្រឹមត្រូវ មុននឹងធ្វើការទូទាត់ប្រាក់។"
-            }
-        ],
-        items: [
-            {
-                id: "item_1",
-                game_id: "game_1",
-                name: "80 Robux",
-                price: 1.00,
-                image: "https://upload.wikimedia.org/wikipedia/commons/c/c7/Robux_2019_Logo_gold.svg"
-            }
-        ]
-    };
-
+    let storeData = { banners: [], games: [], items: [], accounts: [] };
+    let adminAccountsCache = [];
     let currentUser = JSON.parse(localStorage.getItem("kty_tg_user") || "null");
+
     let selectedGame = null;
     let selectedItem = null;
+    let selectedAccount = null;
+
     let currentMD5 = "";
     let pollingTimer = null;
     let bannerIndex = 0;
 
+    let editingBannerIndex = null;
+    let editingGameId = null;
+    let editingItemId = null;
+    let editingAccountId = null;
+    let uploadedAccImages = []; // រក្សាទុក Telegram file_id (អតិបរមា 10 រូប)
+
     window.onload = async () => {
         checkAuth();
-        renderBanners();
         renderGames();
         await fetchStoreData();
         setInterval(nextBanner, 4000);
@@ -589,22 +797,26 @@
     function goHomePage() {
         selectedGame = null;
         selectedItem = null;
+        selectedAccount = null;
         document.getElementById("gameDetailView").style.display = "none";
+        document.getElementById("accountDetailView").style.display = "none";
         document.getElementById("homePageView").style.display = "block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // បើកទំព័រទី ២ (Top-up Item)
     function openGamePage(game) {
         selectedGame = game;
         selectedItem = null;
 
         document.getElementById("homePageView").style.display = "none";
+        document.getElementById("accountDetailView").style.display = "none";
         document.getElementById("gameDetailView").style.display = "block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const heroImg = document.getElementById("heroGameImg");
-        heroImg.src = game.image;
-        heroImg.onerror = () => { heroImg.src = "https://cdn-icons-png.flaticon.com/512/686/686589.png"; };
+        heroImg.src = game.image || DEFAULT_GAME_ICON;
+        heroImg.onerror = () => { heroImg.src = DEFAULT_GAME_ICON; };
         document.getElementById("heroGameName").innerText = game.name;
         document.getElementById("selectedGameTitle").innerText = `បំពេញព័ត៌មាន (${game.name})`;
 
@@ -650,7 +862,7 @@
             const card = document.createElement("div");
             card.className = "item-card";
             card.innerHTML = `
-                <img src="${item.image}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/616/616490.png'">
+                <img src="${item.image || DEFAULT_ITEM_ICON}" onerror="this.src='${DEFAULT_ITEM_ICON}'">
                 <div>
                     <div class="item-name">${item.name}</div>
                     <div class="item-price">$${parseFloat(item.price).toFixed(2)}</div>
@@ -669,6 +881,46 @@
         document.getElementById("orderError").innerText = "";
     }
 
+    // បើកទំព័រទី ៣ (ព័ត៌មានគណនីហ្គេម & អូសមើលរូប 10 សន្លឹក)
+    function openAccountPage(acc) {
+        selectedAccount = acc;
+        document.getElementById("homePageView").style.display = "none";
+        document.getElementById("gameDetailView").style.display = "none";
+        document.getElementById("accountDetailView").style.display = "block";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const gallery = document.getElementById("accDetailGallery");
+        gallery.innerHTML = "";
+        const imgs = (acc.images && acc.images.length > 0) ? acc.images : [];
+        if (imgs.length === 0) {
+            gallery.innerHTML = `<img src="${DEFAULT_GAME_ICON}">`;
+        } else {
+            imgs.forEach(fid => {
+                gallery.innerHTML += `<img src="${API_URL}/api/tg-image/${fid}" onerror="this.src='${DEFAULT_GAME_ICON}'">`;
+            });
+        }
+
+        document.getElementById("accDetailGame").innerText = `🎮 ${acc.game_name}`;
+        document.getElementById("accDetailTitle").innerText = acc.title;
+        document.getElementById("accDetailPrice").innerText = `$${parseFloat(acc.price).toFixed(2)}`;
+        document.getElementById("accDetailDesc").innerText = acc.description || "គ្មានការពិពណ៌នាបន្ថែមទេ។";
+        document.getElementById("accOrderError").innerText = "";
+
+        const stockEl = document.getElementById("accDetailStock");
+        const buyBtn = document.getElementById("buyAccBtn");
+        if (acc.stock > 0) {
+            stockEl.className = "acc-stock stock-in";
+            stockEl.innerText = `នៅសល់ស្តុក៖ ${acc.stock}`;
+            buyBtn.disabled = false;
+            buyBtn.innerText = `ទិញគណនីនេះឥឡូវនេះ ($${parseFloat(acc.price).toFixed(2)})`;
+        } else {
+            stockEl.className = "acc-stock stock-out";
+            stockEl.innerText = "អស់ស្តុក (Sold Out)";
+            buyBtn.disabled = true;
+            buyBtn.innerText = "អស់ស្តុកហើយ";
+        }
+    }
+
     function checkAuth() {
         const authArea = document.getElementById("authArea");
         const adminPanel = document.getElementById("adminPanel");
@@ -680,6 +932,7 @@
             
             if (currentUser.username && currentUser.username.toLowerCase() === "ktyofficial169") {
                 adminPanel.style.display = "block";
+                loadAdminAccounts();
                 loadAdminOrders();
             } else {
                 adminPanel.style.display = "none";
@@ -746,16 +999,26 @@
             });
             const data = await res.json();
             if (data.orders && data.orders.length > 0) {
-                listEl.innerHTML = data.orders.map(o => `
-                    <div class="history-item" style="border-left-color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">
-                        <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                            <span>${o.game_name} - ${o.item_name}</span>
-                            <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${o.status}</span>
-                        </div>
-                        <div style="color:#94a3b8; margin-top:4px;">ID: ${o.player_info} | តម្លៃ: $${o.amount.toFixed(2)}</div>
-                        <div style="color:#64748b; font-size:11px;">${o.created_at}</div>
-                    </div>
-                `).join("");
+                listEl.innerHTML = data.orders.map(o => {
+                    let credHtml = "";
+                    if (o.status === "PAID" && o.order_type === "ACCOUNT" && o.delivered_login) {
+                        credHtml = `
+                            <div style="background:#131b2e; padding:6px 8px; border-radius:6px; margin-top:6px; border:1px solid #10b981;">
+                                <div>📧 User: <b style="color:#fff;">${o.delivered_login}</b></div>
+                                <div>🔑 Pass: <b style="color:#fbbf24;">${o.delivered_password}</b></div>
+                            </div>`;
+                    }
+                    return `
+                        <div class="history-item" style="border-left-color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">
+                            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                                <span>[${o.game_name}] ${o.item_name}</span>
+                                <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${o.status}</span>
+                            </div>
+                            <div style="color:#94a3b8; margin-top:4px;">តម្លៃ: $${o.amount.toFixed(2)} • ${o.player_info}</div>
+                            ${credHtml}
+                            <div style="color:#64748b; font-size:11px; margin-top:4px;">${o.created_at}</div>
+                        </div>`;
+                }).join("");
             } else {
                 listEl.innerHTML = `<div style="color:#94a3b8; font-size:13px;">មិនទាន់មានប្រវត្តិការទិញនៅឡើយទេ។</div>`;
             }
@@ -782,7 +1045,7 @@
                             <span>${o.game_name} - ${o.item_name} ($${o.amount.toFixed(2)})</span>
                             <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${o.status}</span>
                         </div>
-                        <div style="color:#cbd5e1; margin-top:3px;">គណនីហ្គេម៖ <b>${o.player_info}</b></div>
+                        <div style="color:#cbd5e1; margin-top:3px;">ព័ត៌មាន៖ <b>${o.player_info}</b></div>
                         <div style="color:#94a3b8; margin-top:2px;">អ្នកទិញ៖ ${o.tg_username ? '@' + o.tg_username : o.tg_name}</div>
                         <div style="color:#64748b; font-size:11px; margin-top:2px;">${o.bill_number} • ${o.created_at}</div>
                     </div>
@@ -810,9 +1073,12 @@
                 storeData = data;
                 renderBanners();
                 renderGames();
+                renderAccountsHome();
                 renderAdminLists();
             }
-        } catch (e) {}
+        } catch (e) {
+            document.getElementById("gamesGrid").innerHTML = `<div style="grid-column:span 3; text-align:center; color:#f43f5e; padding:20px;">⚠️ កំពុងភ្ជាប់ទៅ Server សូមរង់ចាំបន្តិច...</div>`;
+        }
     }
 
     async function saveStoreToServer() {
@@ -871,15 +1137,56 @@
 
     function renderGames() {
         const grid = document.getElementById("gamesGrid");
+        if (!storeData.games || storeData.games.length === 0) {
+            grid.innerHTML = `<div style="grid-column:span 3; text-align:center; color:#94a3b8; padding:24px; font-size:13px;">⏳ កំពុងផ្ទុកបញ្ជីហ្គេម...</div>`;
+            return;
+        }
         grid.innerHTML = "";
         storeData.games.forEach(game => {
             const card = document.createElement("div");
             card.className = "game-card";
             card.innerHTML = `
-                <img src="${game.image}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/686/686589.png'">
+                <img src="${game.image || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'">
                 <div class="game-name">${game.name}</div>
             `;
             card.onclick = () => openGamePage(game);
+            grid.appendChild(card);
+        });
+    }
+
+    // បង្ហាញបញ្ជីគណនីហ្គេមដាក់លក់នៅខាងក្រោមហ្គេម
+    function renderAccountsHome() {
+        const sec = document.getElementById("accountsHomeSection");
+        const grid = document.getElementById("accountsGrid");
+        if (!storeData.accounts || storeData.accounts.length === 0) {
+            sec.style.display = "none";
+            return;
+        }
+        sec.style.display = "block";
+        grid.innerHTML = "";
+
+        storeData.accounts.forEach(acc => {
+            const thumbUrl = (acc.images && acc.images.length > 0) ? `${API_URL}/api/tg-image/${acc.images[0]}` : DEFAULT_GAME_ICON;
+            const photoCount = acc.images ? acc.images.length : 0;
+            const isOut = acc.stock <= 0;
+
+            const card = document.createElement("div");
+            card.className = "acc-card";
+            card.innerHTML = `
+                <div class="acc-thumb-wrap">
+                    <img src="${thumbUrl}" onerror="this.src='${DEFAULT_GAME_ICON}'">
+                    <span class="acc-game-badge">${acc.game_name}</span>
+                    ${photoCount > 1 ? `<span class="acc-photo-count">🖼️ ${photoCount} រូប</span>` : ''}
+                </div>
+                <div class="acc-body">
+                    <div class="acc-title">${acc.title}</div>
+                    <div class="acc-meta">
+                        <span class="acc-price">$${parseFloat(acc.price).toFixed(2)}</span>
+                        <span class="acc-stock ${isOut ? 'stock-out' : 'stock-in'}">${isOut ? 'អស់ស្តុក' : 'ស្តុក: ' + acc.stock}</span>
+                    </div>
+                </div>
+            `;
+            card.onclick = () => openAccountPage(acc);
             grid.appendChild(card);
         });
     }
@@ -899,49 +1206,305 @@
     function renderAdminLists() {
         document.getElementById("adminBannerList").innerHTML = storeData.banners.map((url, idx) => `
             <div class="list-row">
-                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">Banner #${idx+1}: ${url}</span>
-                <button class="btn-danger" onclick="deleteBanner(${idx})">លុប</button>
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:190px;">Banner #${idx+1}: ${url}</span>
+                <div class="row-actions">
+                    <button class="btn-edit" onclick="editBanner(${idx})">✏️ កែ</button>
+                    <button class="btn-danger" onclick="deleteBanner(${idx})">លុប</button>
+                </div>
             </div>
         `).join("");
 
         const gList = document.getElementById("adminGameList");
         const gSelect = document.getElementById("itemGameSelect");
+        const prevSelectedGame = gSelect.value;
         gList.innerHTML = "";
         gSelect.innerHTML = "";
 
         storeData.games.forEach(g => {
-            gList.innerHTML += `<div class="list-row"><span>🎮 ${g.name}</span><button class="btn-danger" onclick="deleteGame('${g.id}')">លុប</button></div>`;
+            gList.innerHTML += `
+                <div class="list-row">
+                    <span>🎮 ${g.name}</span>
+                    <div class="row-actions">
+                        <button class="btn-edit" onclick="editGame('${g.id}')">✏️ កែ</button>
+                        <button class="btn-danger" onclick="deleteGame('${g.id}')">លុប</button>
+                    </div>
+                </div>`;
             gSelect.innerHTML += `<option value="${g.id}">${g.name}</option>`;
         });
+        if (prevSelectedGame) gSelect.value = prevSelectedGame;
 
         document.getElementById("adminItemList").innerHTML = storeData.items.map(item => {
             const g = storeData.games.find(x => x.id === item.game_id);
-            return `<div class="list-row"><span>[${g ? g.name : "Game"}] ${item.name} - $${item.price}</span><button class="btn-danger" onclick="deleteItem('${item.id}')">លុប</button></div>`;
+            return `
+                <div class="list-row">
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:190px;">[${g ? g.name : "Game"}] ${item.name} - $${item.price}</span>
+                    <div class="row-actions">
+                        <button class="btn-edit" onclick="editItem('${item.id}')">✏️ កែ</button>
+                        <button class="btn-danger" onclick="deleteItem('${item.id}')">លុប</button>
+                    </div>
+                </div>`;
         }).join("");
     }
 
-    function addBanner() {
-        const url = document.getElementById("newBannerUrl").value.trim();
-        if (!url) return;
-        storeData.banners.push(url);
-        document.getElementById("newBannerUrl").value = "";
-        saveStoreToServer();
+    // --- Admin: Upload រូបភាព 10 រូប ទៅ Telegram Cloud ---
+    async function handleAccPhotoUpload(input) {
+        if (!currentUser) return;
+        const files = Array.from(input.files);
+        if (!files.length) return;
+
+        const remaining = 10 - uploadedAccImages.length;
+        if (remaining <= 0) {
+            alert("អ្នកបានបញ្ចូលគ្រប់ ១០ រូបហើយ!");
+            input.value = "";
+            return;
+        }
+
+        const toUpload = files.slice(0, remaining);
+        const progEl = document.getElementById("uploadProgressText");
+
+        for (let i = 0; i < toUpload.length; i++) {
+            progEl.innerText = `⏳ កំពុងផ្ញើរូបទី ${i + 1}/${toUpload.length} ទៅ Telegram Cloud...`;
+            const formData = new FormData();
+            formData.append("tg_id", currentUser.id);
+            formData.append("photo", toUpload[i]);
+
+            try {
+                const res = await fetch(`${API_URL}/api/upload-tg-image`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success && data.file_id) {
+                    uploadedAccImages.push(data.file_id);
+                    renderUploadedAccPhotos();
+                } else {
+                    alert("Upload បរាជ័យ៖ " + (data.error || "Unknown error"));
+                }
+            } catch (e) {
+                alert("មិនអាចភ្ជាប់ទៅ Server ដើម្បី Upload រូបបានទេ!");
+            }
+        }
+        progEl.innerText = `✅ បានផ្ទុករូបភាពសរុប ${uploadedAccImages.length}/10 លើ Telegram`;
+        input.value = "";
     }
 
+    function renderUploadedAccPhotos() {
+        const container = document.getElementById("accPhotoPreview");
+        container.innerHTML = uploadedAccImages.map((fid, idx) => `
+            <div class="preview-item">
+                <img src="${API_URL}/api/tg-image/${fid}">
+                <button class="preview-del" onclick="removeUploadedAccPhoto(${idx})">×</button>
+            </div>
+        `).join("");
+    }
+
+    function removeUploadedAccPhoto(idx) {
+        uploadedAccImages.splice(idx, 1);
+        renderUploadedAccPhotos();
+        document.getElementById("uploadProgressText").innerText = `រូបភាពបច្ចុប្បន្ន៖ ${uploadedAccImages.length}/10`;
+    }
+
+    // --- Admin: គ្រប់គ្រងគណនីហ្គេមសម្រាប់លក់ ---
+    async function loadAdminAccounts() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${API_URL}/api/admin/accounts`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tg_id: currentUser.id })
+            });
+            const data = await res.json();
+            if (data.success) {
+                adminAccountsCache = data.accounts;
+                document.getElementById("adminAccList").innerHTML = adminAccountsCache.map(a => `
+                    <div class="list-row">
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:190px;">
+                            [${a.game_name}] ${a.title} ($${a.price} | ស្តុក:${a.stock})
+                        </span>
+                        <div class="row-actions">
+                            <button class="btn-edit" onclick="editAccountPost('${a.id}')">✏️ កែ</button>
+                            <button class="btn-danger" onclick="deleteAccountPost('${a.id}')">លុប</button>
+                        </div>
+                    </div>
+                `).join("");
+            }
+        } catch (e) {}
+    }
+
+    function editAccountPost(accId) {
+        const a = adminAccountsCache.find(x => x.id === accId);
+        if (!a) return;
+        editingAccountId = accId;
+
+        document.getElementById("accGameName").value = a.game_name || "";
+        document.getElementById("accTitle").value = a.title || "";
+        document.getElementById("accPrice").value = a.price || "";
+        document.getElementById("accStock").value = a.stock ?? 1;
+        document.getElementById("accDesc").value = a.description || "";
+        document.getElementById("accLogin").value = a.acc_login || "";
+        document.getElementById("accPassword").value = a.acc_password || "";
+        uploadedAccImages = [...(a.images || [])];
+        renderUploadedAccPhotos();
+
+        document.getElementById("accEditBanner").style.display = "block";
+        document.getElementById("accSaveBtn").innerText = "💾 រក្សាទុកការកែប្រែគណនី";
+        document.getElementById("accCancelBtn").style.display = "inline-block";
+        document.getElementById("accTitle").focus();
+    }
+
+    function cancelEditAccount() {
+        editingAccountId = null;
+        document.getElementById("accGameName").value = "";
+        document.getElementById("accTitle").value = "";
+        document.getElementById("accPrice").value = "";
+        document.getElementById("accStock").value = "1";
+        document.getElementById("accDesc").value = "";
+        document.getElementById("accLogin").value = "";
+        document.getElementById("accPassword").value = "";
+        uploadedAccImages = [];
+        renderUploadedAccPhotos();
+        document.getElementById("uploadProgressText").innerText = "";
+
+        document.getElementById("accEditBanner").style.display = "none";
+        document.getElementById("accSaveBtn").innerText = "+ បង្ហោះលក់គណនី";
+        document.getElementById("accCancelBtn").style.display = "none";
+    }
+
+    async function saveAccountPost() {
+        if (!currentUser) return;
+        const gameName = document.getElementById("accGameName").value.trim();
+        const title = document.getElementById("accTitle").value.trim();
+        const price = parseFloat(document.getElementById("accPrice").value);
+        const stock = parseInt(document.getElementById("accStock").value || "1");
+        const desc = document.getElementById("accDesc").value.trim();
+        const login = document.getElementById("accLogin").value.trim();
+        const pass = document.getElementById("accPassword").value.trim();
+
+        if (!gameName || !title || isNaN(price) || price <= 0 || !login || !pass) {
+            return alert("សូមបំពេញឈ្មោះហ្គេម ឈ្មោះគណនី តម្លៃ Gmail/Username និង Password ឱ្យបានគ្រប់គ្រាន់!");
+        }
+
+        const btn = document.getElementById("accSaveBtn");
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_URL}/api/admin/account/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tg_id: currentUser.id,
+                    account: {
+                        id: editingAccountId,
+                        game_name: gameName,
+                        title: title,
+                        price: price,
+                        stock: stock,
+                        description: desc,
+                        acc_login: login,
+                        acc_password: pass,
+                        images: uploadedAccImages
+                    }
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                cancelEditAccount();
+                await fetchStoreData();
+                await loadAdminAccounts();
+            } else {
+                alert(data.error);
+            }
+        } catch (e) {
+            alert("មិនអាចរក្សាទុកគណនីបានទេ!");
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function deleteAccountPost(accId) {
+        if (!currentUser) return;
+        if (editingAccountId === accId) cancelEditAccount();
+        try {
+            await fetch(`${API_URL}/api/admin/account/delete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tg_id: currentUser.id, acc_id: accId })
+            });
+            await fetchStoreData();
+            await loadAdminAccounts();
+        } catch (e) {}
+    }
+
+    // --- មុខងារ Banner, Game, Item ផ្សេងៗ ---
+    function editBanner(idx) {
+        editingBannerIndex = idx;
+        document.getElementById("newBannerUrl").value = storeData.banners[idx];
+        document.getElementById("bannerFormLabel").innerText = `✏️ កែសម្រួល Banner #${idx + 1}`;
+        document.getElementById("bannerSaveBtn").innerText = "រក្សាទុក";
+        document.getElementById("bannerCancelBtn").style.display = "inline-block";
+    }
+    function cancelEditBanner() {
+        editingBannerIndex = null;
+        document.getElementById("newBannerUrl").value = "";
+        document.getElementById("bannerFormLabel").innerText = "ដាក់ Link រូបភាព Banner (ទំហំ 16:9)";
+        document.getElementById("bannerSaveBtn").innerText = "បន្ថែម";
+        document.getElementById("bannerCancelBtn").style.display = "none";
+    }
+    function saveBanner() {
+        const url = document.getElementById("newBannerUrl").value.trim();
+        if (!url) return;
+        if (editingBannerIndex !== null) { storeData.banners[editingBannerIndex] = url; cancelEditBanner(); }
+        else { storeData.banners.push(url); document.getElementById("newBannerUrl").value = ""; }
+        saveStoreToServer();
+    }
     function deleteBanner(idx) {
+        if (editingBannerIndex === idx) cancelEditBanner();
         storeData.banners.splice(idx, 1);
         saveStoreToServer();
     }
 
-    function addGame() {
+    function editGame(gameId) {
+        const g = storeData.games.find(x => x.id === gameId);
+        if (!g) return;
+        editingGameId = gameId;
+        document.getElementById("newGameName").value = g.name || "";
+        document.getElementById("newGameImg").value = g.image || "";
+        document.getElementById("in1Enabled").checked = !!g.input1_enabled;
+        document.getElementById("in1Label").value = g.input1_label || "";
+        document.getElementById("in1Placeholder").value = g.input1_placeholder || "";
+        document.getElementById("in2Enabled").checked = !!g.input2_enabled;
+        document.getElementById("in2Label").value = g.input2_label || "";
+        document.getElementById("in2Placeholder").value = g.input2_placeholder || "";
+        document.getElementById("inNote").value = g.input_note || "";
+        toggleInputConfig();
+        document.getElementById("gameEditBanner").style.display = "block";
+        document.getElementById("gameSaveBtn").innerText = "💾 រក្សាទុកការកែប្រែហ្គេម";
+        document.getElementById("gameCancelBtn").style.display = "inline-block";
+    }
+    function cancelEditGame() {
+        editingGameId = null;
+        document.getElementById("newGameName").value = "";
+        document.getElementById("newGameImg").value = "";
+        document.getElementById("in1Enabled").checked = true;
+        document.getElementById("in1Label").value = "";
+        document.getElementById("in1Placeholder").value = "";
+        document.getElementById("in2Enabled").checked = false;
+        document.getElementById("in2Label").value = "";
+        document.getElementById("in2Placeholder").value = "";
+        document.getElementById("inNote").value = "";
+        toggleInputConfig();
+        document.getElementById("gameEditBanner").style.display = "none";
+        document.getElementById("gameSaveBtn").innerText = "+ បង្ហោះហ្គេមថ្មី";
+        document.getElementById("gameCancelBtn").style.display = "none";
+    }
+    function saveGame() {
         const name = document.getElementById("newGameName").value.trim();
         const img = document.getElementById("newGameImg").value.trim();
         if (!name) return alert("សូមបញ្ចូលឈ្មោះហ្គេម!");
-
-        storeData.games.push({
-            id: "game_" + Date.now(),
+        const gameObj = {
+            id: editingGameId || ("game_" + Date.now()),
             name: name,
-            image: img || "https://cdn-icons-png.flaticon.com/512/686/686589.png",
+            image: img || DEFAULT_GAME_ICON,
             input1_enabled: document.getElementById("in1Enabled").checked,
             input1_label: document.getElementById("in1Label").value.trim() || "Username / ID",
             input1_placeholder: document.getElementById("in1Placeholder").value.trim(),
@@ -949,46 +1512,74 @@
             input2_label: document.getElementById("in2Label").value.trim() || "Server ID",
             input2_placeholder: document.getElementById("in2Placeholder").value.trim(),
             input_note: document.getElementById("inNote").value.trim()
-        });
-        document.getElementById("newGameName").value = "";
-        document.getElementById("newGameImg").value = "";
+        };
+        if (editingGameId) {
+            const idx = storeData.games.findIndex(x => x.id === editingGameId);
+            if (idx !== -1) storeData.games[idx] = gameObj;
+        } else {
+            storeData.games.push(gameObj);
+        }
+        cancelEditGame();
         saveStoreToServer();
     }
-
     function deleteGame(gameId) {
+        if (editingGameId === gameId) cancelEditGame();
         storeData.games = storeData.games.filter(g => g.id !== gameId);
         storeData.items = storeData.items.filter(i => i.game_id !== gameId);
         saveStoreToServer();
     }
 
-    function addItem() {
+    function editItem(itemId) {
+        const item = storeData.items.find(x => x.id === itemId);
+        if (!item) return;
+        editingItemId = itemId;
+        document.getElementById("itemGameSelect").value = item.game_id;
+        document.getElementById("newItemName").value = item.name || "";
+        document.getElementById("newItemPrice").value = item.price || "";
+        document.getElementById("newItemImg").value = item.image || "";
+        document.getElementById("itemEditBanner").style.display = "block";
+        document.getElementById("itemSaveBtn").innerText = "💾 រក្សាទុកការកែប្រែ Item";
+        document.getElementById("itemCancelBtn").style.display = "inline-block";
+    }
+    function cancelEditItem() {
+        editingItemId = null;
+        document.getElementById("newItemName").value = "";
+        document.getElementById("newItemPrice").value = "";
+        document.getElementById("newItemImg").value = "";
+        document.getElementById("itemEditBanner").style.display = "none";
+        document.getElementById("itemSaveBtn").innerText = "+ បង្ហោះកញ្ចប់ Item";
+        document.getElementById("itemCancelBtn").style.display = "none";
+    }
+    function saveItem() {
         const gameId = document.getElementById("itemGameSelect").value;
         const name = document.getElementById("newItemName").value.trim();
         const price = parseFloat(document.getElementById("newItemPrice").value);
         const img = document.getElementById("newItemImg").value.trim();
-
-        if (!gameId || !name || isNaN(price) || price <= 0) {
-            return alert("សូមបំពេញឈ្មោះកញ្ចប់ និងតម្លៃឱ្យបានត្រឹមត្រូវ!");
-        }
-        storeData.items.push({
-            id: "item_" + Date.now(),
+        if (!gameId || !name || isNaN(price) || price <= 0) return alert("សូមបំពេញឈ្មោះកញ្ចប់ និងតម្លៃឱ្យបានត្រឹមត្រូវ!");
+        const itemObj = {
+            id: editingItemId || ("item_" + Date.now()),
             game_id: gameId,
             name: name,
             price: price,
-            image: img || "https://cdn-icons-png.flaticon.com/512/616/616490.png"
-        });
-        document.getElementById("newItemName").value = "";
-        document.getElementById("newItemPrice").value = "";
-        document.getElementById("newItemImg").value = "";
+            image: img || DEFAULT_ITEM_ICON
+        };
+        if (editingItemId) {
+            const idx = storeData.items.findIndex(x => x.id === editingItemId);
+            if (idx !== -1) storeData.items[idx] = itemObj;
+        } else {
+            storeData.items.push(itemObj);
+        }
+        cancelEditItem();
         saveStoreToServer();
     }
-
     function deleteItem(itemId) {
+        if (editingItemId === itemId) cancelEditItem();
         storeData.items = storeData.items.filter(i => i.id !== itemId);
         saveStoreToServer();
     }
 
-    async function createOrder() {
+    // ==================== ការទូទាត់ប្រាក់ KHQR (ទាំង Item និង គណនីហ្គេម) ====================
+    async function createItemOrder() {
         const errEl = document.getElementById("orderError");
         if (!selectedGame || !selectedItem) {
             errEl.innerText = "⚠️ សូមជ្រើសរើសកញ្ចប់ Item ជាមុនសិន!";
@@ -1017,6 +1608,7 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    order_type: "ITEM",
                     tg_id: currentUser ? currentUser.id : "",
                     game_name: selectedGame.name,
                     item_name: selectedItem.name,
@@ -1025,25 +1617,8 @@
                 })
             });
             const data = await res.json();
-
             if (data.success) {
-                currentMD5 = data.md5;
-                document.getElementById("qrOrderDesc").innerText = `${selectedGame.name} - ${selectedItem.name} | ID: ${pInfo.join(" ")}`;
-                document.getElementById("qrAmountText").innerText = `$${data.amount.toFixed(2)}`;
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(data.qr_string)}`;
-                document.getElementById("qrImgHolder").innerHTML = `<img src="${qrUrl}" style="width:185px; height:185px;">`;
-
-                document.getElementById("qrView").style.display = "block";
-                document.getElementById("thankYouView").style.display = "none";
-                document.getElementById("qrModal").style.display = "flex";
-
-                startAutoPaymentCheck({
-                    bill_number: data.bill_number,
-                    game_name: selectedGame.name,
-                    item_name: selectedItem.name,
-                    player_info: pInfo.join(" "),
-                    amount: data.amount
-                });
+                openQrPaymentModal(data, `${selectedGame.name} - ${selectedItem.name} | ID: ${pInfo.join(" ")}`);
             } else {
                 errEl.innerText = data.error;
             }
@@ -1055,9 +1630,55 @@
         }
     }
 
-    function startAutoPaymentCheck(orderSummary) {
+    async function createAccountOrder() {
+        if (!selectedAccount) return;
+        const errEl = document.getElementById("accOrderError");
+        const buyBtn = document.getElementById("buyAccBtn");
+
+        errEl.innerText = "";
+        buyBtn.disabled = true;
+        buyBtn.innerText = "កំពុងបង្កើត KHQR...";
+
+        try {
+            const res = await fetch(`${API_URL}/api/create-order`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    order_type: "ACCOUNT",
+                    account_id: selectedAccount.id,
+                    tg_id: currentUser ? currentUser.id : ""
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                openQrPaymentModal(data, `ទិញគណនី៖ ${selectedAccount.title}`);
+            } else {
+                errEl.innerText = data.error;
+            }
+        } catch (e) {
+            errEl.innerText = "មិនអាចភ្ជាប់ទៅ Server បានទេ!";
+        } finally {
+            buyBtn.disabled = false;
+            buyBtn.innerText = `ទិញគណនីនេះឥឡូវនេះ ($${parseFloat(selectedAccount.price).toFixed(2)})`;
+        }
+    }
+
+    function openQrPaymentModal(data, descText) {
+        currentMD5 = data.md5;
+        document.getElementById("qrOrderDesc").innerText = descText;
+        document.getElementById("qrAmountText").innerText = `$${data.amount.toFixed(2)}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(data.qr_string)}`;
+        document.getElementById("qrImgHolder").innerHTML = `<img src="${qrUrl}" style="width:185px; height:185px;">`;
+
+        document.getElementById("qrView").style.display = "block";
+        document.getElementById("thankYouView").style.display = "none";
+        document.getElementById("qrModal").style.display = "flex";
+
+        startAutoPaymentCheck();
+    }
+
+    function startAutoPaymentCheck() {
         if (pollingTimer) clearInterval(pollingTimer);
-        
         pollingTimer = setInterval(async () => {
             try {
                 const res = await fetch(`${API_URL}/api/check-payment`, {
@@ -1067,27 +1688,51 @@
                 });
                 const data = await res.json();
 
-                if (data.status === "PAID") {
+                if (data.status === "PAID" && data.order) {
                     clearInterval(pollingTimer);
                     pollingTimer = null;
-                    showThankYouScreen(orderSummary);
+                    showThankYouScreen(data.order);
+                    fetchStoreData(); // ផ្ទុកស្តុកថ្មីឡើងវិញ
                     if (currentUser && currentUser.username && currentUser.username.toLowerCase() === "ktyofficial169") {
                         loadAdminOrders();
+                        loadAdminAccounts();
                     }
                 }
             } catch (e) {}
         }, 4000);
     }
 
-    function showThankYouScreen(info) {
-        document.getElementById("recBill").innerText = info.bill_number;
-        document.getElementById("recGame").innerText = info.game_name;
-        document.getElementById("recItem").innerText = info.item_name;
-        document.getElementById("recPlayer").innerText = info.player_info;
-        document.getElementById("recAmount").innerText = `$${info.amount.toFixed(2)} (PAID)`;
+    function showThankYouScreen(order) {
+        document.getElementById("recBill").innerText = order.bill_number;
+        document.getElementById("recGame").innerText = order.game_name;
+        document.getElementById("recItem").innerText = order.item_name;
+        document.getElementById("recAmount").innerText = `$${parseFloat(order.amount).toFixed(2)} (PAID)`;
+
+        const credBox = document.getElementById("deliveredAccountBox");
+        const playerRow = document.getElementById("recPlayerRow");
+        const subText = document.getElementById("thankYouSubText");
+
+        if (order.order_type === "ACCOUNT" && order.delivered_login) {
+            credBox.style.display = "block";
+            playerRow.style.display = "none";
+            document.getElementById("delivLogin").innerText = order.delivered_login;
+            document.getElementById("delivPass").innerText = order.delivered_password;
+            subText.innerHTML = "សូមអរគុណ! ខាងក្រោមនេះគឺជាព័ត៌មានគណនីហ្គេមរបស់អ្នក សូមចម្លងដើម្បីចូលលេងភ្លាមៗ៖";
+        } else {
+            credBox.style.display = "none";
+            playerRow.style.display = "flex";
+            document.getElementById("recPlayer").innerText = order.player_info;
+            subText.innerHTML = "សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY TOPUP STORE</b>។ ប្រព័ន្ធបានបញ្ជូនព័ត៌មានទៅក្រុមការងារដើម្បីដំណើរការជូនអ្នកភ្លាមៗ!";
+        }
 
         document.getElementById("qrView").style.display = "none";
         document.getElementById("thankYouView").style.display = "block";
+    }
+
+    function copyText(elementId) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text);
+        alert("បានចម្លង៖ " + text);
     }
 
     function closeQrModal() {
