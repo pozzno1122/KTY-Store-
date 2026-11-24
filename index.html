@@ -427,7 +427,6 @@
             <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅជ្រើសរើសហ្គេម</button>
         </div>
 
-        <!-- ផ្ទាំង Logo ហ្គេមធំស្អាតនៅផ្នែកខាងលើ -->
         <div class="game-hero">
             <img id="heroGameImg" src="" alt="Game Logo">
             <div class="game-hero-info">
@@ -439,20 +438,17 @@
             </div>
         </div>
 
-        <!-- ជំហានទី ១៖ បំពេញព័ត៌មានគណនី -->
         <div class="box" id="playerInputBox">
             <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
             <div id="dynamicInputs"></div>
             <div class="note-text" id="gameInputNote"></div>
         </div>
 
-        <!-- ជំហានទី ២៖ ជ្រើសរើសកញ្ចប់ Item -->
         <div class="box">
             <div class="sec-title"><span class="step-num">2</span> ជ្រើសរើសកញ្ចប់ Item</div>
             <div class="items-grid" id="itemsGrid"></div>
         </div>
 
-        <!-- ជំហានទី ៣៖ ទូទាត់ប្រាក់ -->
         <div class="box">
             <div class="sec-title"><span class="step-num">3</span> ផ្ទៀងផ្ទាត់ និងទូទាត់ប្រាក់</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:10px; background:#090d16; border-radius:10px;">
@@ -541,7 +537,8 @@
 </div>
 
 <script>
-    const API_URL = window.location.origin.includes("5000") ? "" : "http://127.0.0.1:5000";
+    // ភ្ជាប់ទៅកាន់ Server Render របស់អ្នកដោយផ្ទាល់ (Run 24/7)
+    const API_URL = "https://kty-store.onrender.com";
     const BOT_USERNAME = "KTYlogin_bot";
 
     let storeData = {
@@ -589,7 +586,6 @@
         setInterval(nextBanner, 4000);
     };
 
-    // ប្តូរទៅទំព័រដើម (Page 1)
     function goHomePage() {
         selectedGame = null;
         selectedItem = null;
@@ -598,24 +594,20 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // ប្តូរទៅទំព័រទិញកញ្ចប់ហ្គេម (Page 2)
     function openGamePage(game) {
         selectedGame = game;
         selectedItem = null;
 
-        // ប្តូរទំព័រ
         document.getElementById("homePageView").style.display = "none";
         document.getElementById("gameDetailView").style.display = "block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // ដាក់ Logo និងឈ្មោះហ្គេមនៅផ្នែកខាងលើនៃទំព័រទី ២
         const heroImg = document.getElementById("heroGameImg");
         heroImg.src = game.image;
         heroImg.onerror = () => { heroImg.src = "https://cdn-icons-png.flaticon.com/512/686/686589.png"; };
         document.getElementById("heroGameName").innerText = game.name;
         document.getElementById("selectedGameTitle").innerText = `បំពេញព័ត៌មាន (${game.name})`;
 
-        // បង្កើតប្រអប់បំពេញព័ត៌មាន
         const dynInputs = document.getElementById("dynamicInputs");
         dynInputs.innerHTML = "";
         let hasInput = false;
@@ -646,7 +638,6 @@
         }
         document.getElementById("playerInputBox").style.display = (hasInput || game.input_note) ? "block" : "none";
 
-        // បង្ហាញកញ្ចប់ Item របស់ហ្គេមនេះ
         const itemsGrid = document.getElementById("itemsGrid");
         itemsGrid.innerHTML = "";
         const gameItems = storeData.items.filter(i => i.game_id === game.id);
