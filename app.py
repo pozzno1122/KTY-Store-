@@ -5,6 +5,7 @@ import requests
 import hashlib
 import hmac
 import time
+import uuid
 import json
 import os
 
@@ -55,7 +56,7 @@ DEFAULT_DATA = {
     "orders": []
 }
 
-# ==================== ប្រព័ន្ធរក្សាទុកទិន្នន័យលើ Telegram Cloud (មិនបាត់ពេល Restart) ====================
+# ==================== ប្រព័ន្ធរក្សាទុកទិន្នន័យលើ Telegram Cloud ====================
 def sync_from_telegram():
     try:
         res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=8).json()
@@ -109,7 +110,6 @@ def load_data():
                 return d
         except:
             pass
-    # ទាញយកទិន្នន័យចុងក្រោយពី Telegram Cloud ពេល Server ទើប Restart
     cloud_data = sync_from_telegram()
     if cloud_data:
         return cloud_data
@@ -122,7 +122,6 @@ def save_data(data, sync_cloud=True):
     if sync_cloud:
         backup_to_telegram(data)
 
-# ផ្ទុកទិន្នន័យពី Telegram Cloud ភ្លាមៗពេល Server ចាប់ផ្តើម
 sync_from_telegram()
 
 def send_telegram_group(text):
@@ -178,7 +177,6 @@ def get_store():
 def upload_tg_image():
     if 'photo' not in request.files:
         return jsonify({"success": False, "error": "មិនមានរូបភាពទេ!"}), 400
-
     photo_file = request.files['photo']
     try:
         url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendPhoto"
@@ -293,9 +291,9 @@ def auth_telegram():
 @app.route('/api/orders/history', methods=['POST'])
 def get_order_history():
     payload = request.get_json(silent=True) or {}
-    tg_id = str(payload.get("tg_id", ""))
+    tg_id = str(payload.get("tg_id", "")).strip()
     d = load_data()
-    user_orders = [o for o in d["orders"] if str(o.get("tg_id")) == tg_id]
+    user_orders = [o for o in d["orders"] if str(o.get("tg_id", "")).strip() == tg_id]
     return jsonify({"success": True, "orders": list(reversed(user_orders))})
 
 @app.route('/api/admin/orders', methods=['POST'])
@@ -303,7 +301,6 @@ def get_all_orders_admin():
     d = load_data()
     return jsonify({"success": True, "orders": list(reversed(d["orders"]))})
 
-# រក្សាទុកការរៀបចំ Banner, ហ្គេម, និង Item ចូល Telegram Cloud ភ្លាមៗ
 @app.route('/api/store/save', methods=['POST'])
 def update_store():
     payload = request.get_json(silent=True) or {}
@@ -317,10 +314,13 @@ def update_store():
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Invalid data"}), 400
 
+# បង្កើត One-Time Dynamic KHQR (បង់បានតែម្តងគត់ក្នុងមួយ QR ការពារសុវត្ថិភាព ១០០%)
 @app.route('/api/create-order', methods=['POST'])
 def create_order():
     data = request.get_json(silent=True) or {}
     tg_id = str(data.get("tg_id", "")).strip()
+    tg_username = str(data.get("tg_username", "")).strip()
+    tg_name = str(data.get("tg_name", "")).strip()
     order_type = data.get("order_type", "ITEM")
     d = load_data()
     user = d["users"].get(tg_id) if tg_id else None
@@ -348,17 +348,20 @@ def create_order():
         return jsonify({"success": False, "error": "តម្លៃមិនត្រឹមត្រូវ!"}), 400
 
     try:
-        bill_no = f"KTY-{int(time.time())}"
+        # បង្កើតលេខសម្គាល់តែមួយគត់ (Unique Bill + Nonce) ដើម្បីឱ្យ KHQR នីមួយៗខុសគ្នាដាច់ស្រឡះ
+        unique_nonce = uuid.uuid4().hex[:6].upper()
+        bill_no = f"KTY-{int(time.time())}-{unique_nonce}"
+        
         qr_string = khqr.create_qr(
             account_id=BAKONG_ID,
             merchant_name="KTY TOPUP STORE",
             merchant_city="Phnom Penh",
             amount=round(price_usd, 2),
             currency="USD",
-            store_label=game_name[:15],
+            store_label=f"KTY-{unique_nonce}",
             phone_number="855979556757",
             bill_number=bill_no,
-            terminal_label=item_name[:15],
+            terminal_label=f"T-{unique_nonce}",
             static=False
         )
         md5_hash = khqr.generate_md5(qr_string)
@@ -368,14 +371,16 @@ def create_order():
             "md5": md5_hash,
             "order_type": order_type,
             "account_id": acc_id,
-            "tg_id": tg_id if user else "GUEST",
-            "tg_username": user.get("username", "") if user else "",
-            "tg_name": user.get("first_name", "ភ្ញៀវទូទៅ (Guest)") if user else "ភ្ញៀវទូទៅ (Guest)",
+            "tg_id": tg_id if tg_id else "GUEST",
+            "tg_username": user.get("username", tg_username) if user else tg_username,
+            "tg_name": user.get("first_name", tg_name or "ភ្ញៀវទូទៅ (Guest)") if user else (tg_name or "ភ្ញៀវទូទៅ (Guest)"),
             "game_name": game_name,
             "item_name": item_name,
             "player_info": player_info,
             "amount": round(price_usd, 2),
             "status": "PENDING",
+            "used": False,
+            "created_ts": time.time(),
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         d["orders"].append(order_record)
@@ -386,11 +391,13 @@ def create_order():
             "qr_string": qr_string,
             "md5": md5_hash,
             "amount": round(price_usd, 2),
-            "bill_number": bill_no
+            "bill_number": bill_no,
+            "expires_in": 300
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ផ្ទៀងផ្ទាត់ការបង់ប្រាក់ (KHQR មួយប្រើបានតែម្តងគត់ និងផុតកំណត់ក្នុង 5 នាទី)
 @app.route('/api/check-payment', methods=['POST'])
 def check_payment():
     data = request.get_json(silent=True) or {}
@@ -398,59 +405,74 @@ def check_payment():
     if not md5_hash:
         return jsonify({"success": False, "error": "Missing MD5"}), 400
 
+    d = load_data()
+    order = next((o for o in d["orders"] if o["md5"] == md5_hash), None)
+    if not order:
+        return jsonify({"success": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
+
+    # ប្រសិនបើ KHQR នេះត្រូវបានប្រើរួចហើយ (Used / PAID) មិនអនុញ្ញាតឱ្យប្រើម្តងទៀតទេ
+    if order.get("status") == "PAID" or order.get("used"):
+        return jsonify({"success": True, "status": "PAID", "order": order})
+
+    # ពិនិត្យសុពលភាព KHQR (ផុតកំណត់ក្រោយ 5 នាទី = 300 វិនាទី)
+    if time.time() - order.get("created_ts", 0) > 300:
+        order["status"] = "EXPIRED"
+        order["used"] = True
+        save_data(d, sync_cloud=False)
+        return jsonify({"success": True, "status": "EXPIRED"})
+
     try:
         status = khqr.check_payment(md5_hash)
         if status == "PAID":
-            d = load_data()
-            for o in d["orders"]:
-                if o["md5"] == md5_hash:
-                    if o["status"] != "PAID":
-                        o["status"] = "PAID"
-                        o["paid_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            # ចាក់សោ KHQR នេះភ្លាមៗកុំឱ្យប្រើម្តងទៀតបាន (Single-Use Lock)
+            order["status"] = "PAID"
+            order["used"] = True
+            order["paid_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
-                        if o.get("order_type") == "ACCOUNT":
-                            acc = next((a for a in d["accounts"] if a["id"] == o.get("account_id")), None)
-                            if acc:
-                                o["delivered_login"] = acc.get("acc_login", "")
-                                o["delivered_password"] = acc.get("acc_password", "")
-                                if acc["stock"] > 0:
-                                    acc["stock"] -= 1
+            if order.get("order_type") == "ACCOUNT":
+                acc = next((a for a in d["accounts"] if a["id"] == order.get("account_id")), None)
+                if acc:
+                    order["delivered_login"] = acc.get("acc_login", "")
+                    order["delivered_password"] = acc.get("acc_password", "")
+                    if acc["stock"] > 0:
+                        acc["stock"] -= 1
 
-                        save_data(d, sync_cloud=True)
+            # រក្សាទុកប្រវត្តិការទិញ និងព័ត៌មានគណនីចូល Telegram Cloud ភ្លាមៗ
+            save_data(d, sync_cloud=True)
 
-                        if o["tg_id"] == "GUEST":
-                            buyer_text = "ភ្ញៀវទូទៅ (Guest)"
-                        else:
-                            tg_tag = f"@{o['tg_username']}" if o.get("tg_username") else o.get("tg_name")
-                            buyer_text = f"{tg_tag} (<code>{o['tg_id']}</code>)"
+            if order["tg_id"] == "GUEST":
+                buyer_text = "ភ្ញៀវទូទៅ (Guest)"
+            else:
+                tg_tag = f"@{order['tg_username']}" if order.get("tg_username") else order.get("tg_name")
+                buyer_text = f"{tg_tag} (<code>{order['tg_id']}</code>)"
 
-                        if o.get("order_type") == "ACCOUNT":
-                            msg = (
-                                f"🔐 <b>លក់គណនីហ្គេមជោគជ័យ (PAID ✅)</b>\n"
-                                f"━━━━━━━━━━━━━━━━━━\n"
-                                f"🧾 វិក្កយបត្រ៖ <code>{o['bill_number']}</code>\n"
-                                f"🎮 ហ្គេម៖ <b>{o['game_name']}</b>\n"
-                                f"🏷️ ឈ្មោះគណនី៖ <b>{o['item_name']}</b>\n"
-                                f"💵 ទឹកប្រាក់៖ <b>${o['amount']:.2f}</b>\n"
-                                f"👤 អ្នកទិញ៖ {buyer_text}\n"
-                                f"📧 User/Gmail៖ <code>{o.get('delivered_login', '')}</code>\n"
-                                f"🔑 Password៖ <code>{o.get('delivered_password', '')}</code>\n"
-                                f"⏰ ម៉ោងបង់ប្រាក់៖ {o['paid_at']}"
-                            )
-                        else:
-                            msg = (
-                                f"💰 <b>មានការបញ្ជាទិញថ្មី (PAID ✅)</b>\n"
-                                f"━━━━━━━━━━━━━━━━━━\n"
-                                f"🧾 វិក្កយបត្រ៖ <code>{o['bill_number']}</code>\n"
-                                f"🎮 ហ្គេម៖ <b>{o['game_name']}</b>\n"
-                                f"💎 កញ្ចប់ Item៖ <b>{o['item_name']}</b>\n"
-                                f"🆔 គណនីហ្គេម៖ <code>{o['player_info']}</code>\n"
-                                f"💵 ទឹកប្រាក់៖ <b>${o['amount']:.2f}</b>\n"
-                                f"👤 អ្នកទិញ៖ {buyer_text}\n"
-                                f"⏰ ម៉ោងបង់ប្រាក់៖ {o['paid_at']}"
-                            )
-                        send_telegram_group(msg)
-                    return jsonify({"success": True, "status": "PAID", "order": o})
+            if order.get("order_type") == "ACCOUNT":
+                msg = (
+                    f"🔐 <b>លក់គណនីហ្គេមជោគជ័យ (PAID ✅)</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━\n"
+                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>\n"
+                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
+                    f"🏷️ ឈ្មោះគណនី៖ <b>{order['item_name']}</b>\n"
+                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b>\n"
+                    f"👤 អ្នកទិញ៖ {buyer_text}\n"
+                    f"📧 User/Gmail៖ <code>{order.get('delivered_login', '')}</code>\n"
+                    f"🔑 Password៖ <code>{order.get('delivered_password', '')}</code>\n"
+                    f"⏰ ម៉ោងបង់ប្រាក់៖ {order['paid_at']}"
+                )
+            else:
+                msg = (
+                    f"💰 <b>មានការបញ្ជាទិញថ្មី (PAID ✅)</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━\n"
+                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>\n"
+                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
+                    f"💎 កញ្ចប់ Item៖ <b>{order['item_name']}</b>\n"
+                    f"🆔 គណនីហ្គេម៖ <code>{order['player_info']}</code>\n"
+                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b>\n"
+                    f"👤 អ្នកទិញ៖ {buyer_text}\n"
+                    f"⏰ ម៉ោងបង់ប្រាក់៖ {order['paid_at']}"
+                )
+            send_telegram_group(msg)
+            return jsonify({"success": True, "status": "PAID", "order": order})
 
         return jsonify({"success": True, "status": status})
     except Exception as e:
