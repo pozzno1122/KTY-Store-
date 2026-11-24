@@ -13,30 +13,35 @@
             color: #f8fafc;
             padding-bottom: 95px;
         }
+        /* Navbar */
         .navbar {
             background: rgba(17, 24, 39, 0.95);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid #1f2937;
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 12px 20px;
             position: sticky;
             top: 0;
             z-index: 50;
+        }
+        .nav-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .brand {
             display: flex;
             align-items: center;
             gap: 10px;
             font-weight: 800;
-            font-size: 18px;
+            font-size: 19px;
             color: #38bdf8;
             cursor: pointer;
         }
         .brand img {
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 10px;
             object-fit: cover;
             background: #1e293b;
@@ -56,7 +61,9 @@
             gap: 6px;
         }
         .tg-btn img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
-        .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+        /* Responsive Container: ស្អាតទាំងទូរសព្ទ និងកុំព្យូទ័រ */
+        .container { max-width: 1120px; margin: 0 auto; padding: 18px 16px; }
 
         .page-view { animation: fadeIn 0.25s ease-out; }
         @keyframes fadeIn {
@@ -64,32 +71,34 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* Banner 16:9 */
         .banner-wrapper {
             position: relative;
             width: 100%;
+            max-width: 900px;
+            margin: 0 auto 24px;
             aspect-ratio: 16 / 9;
-            border-radius: 16px;
+            border-radius: 18px;
             overflow: hidden;
             background: #1e293b;
-            margin-bottom: 22px;
             border: 1px solid #334155;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45);
         }
         .banner-slide { width: 100%; height: 100%; object-fit: cover; display: none; }
         .banner-slide.active { display: block; }
         .banner-dots {
             position: absolute;
-            bottom: 10px;
+            bottom: 12px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             gap: 6px;
         }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; }
-        .dot.active { background: #38bdf8; width: 18px; border-radius: 4px; }
+        .dot.active { background: #38bdf8; width: 20px; border-radius: 4px; }
 
         .sec-title {
-            font-size: 16px;
+            font-size: 17px;
             font-weight: bold;
             margin-bottom: 14px;
             color: #e2e8f0;
@@ -110,26 +119,29 @@
             font-weight: bold;
         }
 
+        /* Games Grid: ទូរសព្ទ 3 ជួរឈរ, កុំព្យូទ័រ 6 ជួរឈរ */
         .games-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 12px;
-            margin-bottom: 26px;
+            margin-bottom: 28px;
+        }
+        @media (min-width: 768px) {
+            .games-grid { grid-template-columns: repeat(6, 1fr); gap: 16px; }
         }
         .game-card {
             background: #131b2e;
             border: 1px solid #26334d;
             border-radius: 16px;
-            padding: 14px 8px;
+            padding: 16px 10px;
             text-align: center;
             cursor: pointer;
             transition: transform 0.15s, border-color 0.2s;
         }
-        .game-card:active { transform: scale(0.96); }
-        .game-card:hover { border-color: #38bdf8; }
+        .game-card:hover { border-color: #38bdf8; transform: translateY(-2px); }
         .game-card img {
-            width: 72px;
-            height: 72px;
+            width: 76px;
+            height: 76px;
             border-radius: 16px;
             object-fit: cover;
             margin-bottom: 8px;
@@ -137,10 +149,14 @@
         }
         .game-name { font-size: 13px; font-weight: bold; color: #f1f5f9; }
 
+        /* Accounts Grid: ទូរសព្ទ 2 ជួរឈរ, កុំព្យូទ័រ 4 ជួរឈរ */
         .accounts-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
+        }
+        @media (min-width: 768px) {
+            .accounts-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
         }
         .acc-card {
             background: #131b2e;
@@ -150,8 +166,9 @@
             cursor: pointer;
             display: flex;
             flex-direction: column;
+            transition: transform 0.15s, border-color 0.2s;
         }
-        .acc-card:hover { border-color: #fbbf24; }
+        .acc-card:hover { border-color: #fbbf24; transform: translateY(-2px); }
         .acc-thumb-wrap {
             position: relative;
             width: 100%;
@@ -181,7 +198,7 @@
             padding: 2px 6px;
             border-radius: 6px;
         }
-        .acc-body { padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .acc-body { padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
         .acc-title { font-size: 13px; font-weight: bold; color: #f8fafc; margin-bottom: 6px; line-height: 1.3; }
         .acc-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
         .acc-price { font-size: 15px; font-weight: 800; color: #fbbf24; }
@@ -189,18 +206,28 @@
         .stock-in { background: rgba(16, 185, 129, 0.15); color: #10b981; }
         .stock-out { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 
+        /* Detail Layout (Desktop 2 Columns, Mobile 1 Column) */
+        .detail-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        @media (min-width: 820px) {
+            .detail-layout { grid-template-columns: 360px 1fr; align-items: start; }
+        }
+
         .acc-gallery {
             display: flex;
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             gap: 10px;
             border-radius: 16px;
-            margin-bottom: 14px;
+            margin-bottom: 10px;
             padding-bottom: 6px;
         }
         .acc-gallery img {
             width: 100%;
-            max-height: 240px;
+            max-height: 280px;
             flex-shrink: 0;
             scroll-snap-align: center;
             border-radius: 14px;
@@ -260,7 +287,11 @@
         input:focus { border-color: #38bdf8; }
         .note-text { font-size: 12px; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 10px; margin-top: 8px; line-height: 1.4; }
 
+        /* Items Grid: ទូរសព្ទ 2 ជួរឈរ, កុំព្យូទ័រ 3 ជួរឈរ */
         .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (min-width: 768px) {
+            .items-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        }
         .item-card {
             background: #090d16;
             border: 2px solid #1e293b;
@@ -284,13 +315,17 @@
         .btn-danger { background: #ef4444; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
         .btn-cancel { background: #475569; color: #fff; padding: 10px; font-size: 13px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
 
+        /* Admin Panel */
         #adminPanel {
             display: none;
             background: #172033;
             border: 2px solid #f59e0b;
             border-radius: 16px;
             padding: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            max-width: 760px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .admin-tabs { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; }
         .tab-btn { flex: 1; min-width: 65px; padding: 8px 4px; background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 11px; }
@@ -301,88 +336,182 @@
         .row-actions { display: flex; gap: 6px; flex-shrink: 0; }
         .switch-row { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
 
-        .preview-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 6px;
-            margin-top: 8px;
-        }
-        .preview-item {
-            position: relative;
-            aspect-ratio: 1;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #38bdf8;
-        }
+        .preview-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
+        .preview-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid #38bdf8; }
         .preview-item img { width: 100%; height: 100%; object-fit: cover; }
-        .preview-del {
-            position: absolute;
-            top: 2px;
-            right: 2px;
+        .preview-del { position: absolute; top: 2px; right: 2px; background: #ef4444; color: #fff; border: none; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; cursor: pointer; }
+
+        /* ==================== ប៊ូតុងឆាតនៅជ្រុងខាងក្រោមឆ្វេងដៃ ==================== */
+        .floating-chat-btn {
+            position: fixed;
+            bottom: 18px;
+            left: 18px;
+            z-index: 90;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #fff;
+            border: 2px solid #38bdf8;
+            padding: 12px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.55);
+            transition: transform 0.15s;
+        }
+        .floating-chat-btn:active { transform: scale(0.95); }
+        .chat-badge {
             background: #ef4444;
             color: #fff;
-            border: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
             font-size: 11px;
-            cursor: pointer;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 12px;
+            display: none;
         }
 
-        .cred-box {
-            background: #090d16;
-            border: 2px solid #10b981;
-            border-radius: 12px;
-            padding: 12px;
-            margin: 12px 0;
-            text-align: left;
+        /* ផ្ទាំងឆាត (Chat Window Modal) */
+        .chat-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            z-index: 120;
+            justify-content: center;
+            align-items: flex-end;
+            padding: 10px;
         }
-        .cred-field {
+        @media (min-width: 640px) {
+            .chat-modal {
+                align-items: flex-end;
+                justify-content: flex-start;
+                padding: 20px;
+            }
+        }
+        .chat-window {
             background: #131b2e;
-            padding: 8px 10px;
-            border-radius: 8px;
-            margin-top: 6px;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 410px;
+            height: 78vh;
+            max-height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.65);
+        }
+        .chat-header {
+            background: #1e293b;
+            padding: 12px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 13px;
+            border-bottom: 1px solid #334155;
         }
-        .copy-btn {
-            background: #0284c7;
-            color: #fff;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
+        .chat-header-info { display: flex; align-items: center; gap: 10px; }
+        .chat-header-info img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid #38bdf8; }
+        .chat-rooms-list { flex: 1; overflow-y: auto; padding: 12px; }
+        .chat-room-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #090d16;
+            padding: 10px 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
             cursor: pointer;
-            font-weight: bold;
+            border: 1px solid #1e293b;
         }
+        .chat-room-item:hover { border-color: #38bdf8; }
+        .chat-messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #090d16;
+        }
+        .msg-row { display: flex; gap: 8px; max-width: 82%; align-items: flex-end; }
+        .msg-row.mine { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #1e293b; }
+        .msg-bubble {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 9px 12px;
+            border-radius: 14px;
+            font-size: 13px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .msg-row.mine .msg-bubble { background: #0284c7; color: #fff; }
+        .msg-sender { font-size: 10px; color: #94a3b8; margin-bottom: 2px; font-weight: bold; }
+        .msg-time { font-size: 9px; opacity: 0.7; margin-top: 4px; text-align: right; }
+        .msg-bubble img.chat-img { max-width: 190px; border-radius: 10px; margin-top: 4px; display: block; cursor: pointer; }
+        .msg-bubble audio { width: 190px; height: 34px; margin-top: 4px; }
 
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); justify-content: center; align-items: center; padding: 16px; z-index: 100; }
-        .modal-box { background: #1e293b; border-radius: 20px; padding: 22px; max-width: 390px; width: 100%; text-align: center; max-height: 88vh; overflow-y: auto; border: 1px solid #334155; }
-        .history-item { background: #090d16; padding: 12px; border-radius: 12px; margin-bottom: 10px; text-align: left; font-size: 12px; border-left: 4px solid #38bdf8; }
-
-        .scanning-indicator {
+        .chat-input-bar {
+            background: #1e293b;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-top: 1px solid #334155;
+        }
+        .chat-icon-btn {
+            background: #0f172a;
+            color: #38bdf8;
+            border: 1px solid #334155;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            background: rgba(56, 189, 248, 0.12);
-            color: #38bdf8;
-            padding: 10px;
-            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .chat-icon-btn.recording { background: #ef4444; color: #fff; border-color: #ef4444; animation: pulse 1s infinite; }
+        .chat-text-input {
+            flex: 1;
+            padding: 9px 12px;
+            border-radius: 20px;
+            border: 1px solid #334155;
+            background: #090d16;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+        .chat-send-btn {
+            background: #10b981;
+            color: #fff;
+            border: none;
+            padding: 9px 14px;
+            border-radius: 20px;
             font-size: 13px;
             font-weight: bold;
-            margin-top: 10px;
+            cursor: pointer;
+            flex-shrink: 0;
         }
+
+        /* Credential & Modals */
+        .cred-box { background: #090d16; border: 2px solid #10b981; border-radius: 12px; padding: 12px; margin: 12px 0; text-align: left; }
+        .cred-field { background: #131b2e; padding: 8px 10px; border-radius: 8px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .copy-btn { background: #0284c7; color: #fff; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: bold; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); justify-content: center; align-items: center; padding: 16px; z-index: 100; }
+        .modal-box { background: #1e293b; border-radius: 20px; padding: 22px; max-width: 400px; width: 100%; text-align: center; max-height: 88vh; overflow-y: auto; border: 1px solid #334155; }
+        .history-item { background: #090d16; padding: 12px; border-radius: 12px; margin-bottom: 10px; text-align: left; font-size: 12px; border-left: 4px solid #38bdf8; }
+
+        .scanning-indicator { display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-top: 10px; }
         .pulse-dot { width: 10px; height: 10px; background: #38bdf8; border-radius: 50%; animation: pulse 1.2s infinite; }
         @keyframes pulse { 0% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.4; } 100% { transform: scale(0.9); opacity: 1; } }
 
-        .check-circle {
-            width: 68px; height: 68px; background: linear-gradient(135deg, #10b981, #059669);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 12px; font-size: 34px; color: #fff;
-        }
+        .check-circle { width: 68px; height: 68px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 34px; color: #fff; }
         .receipt-box { background: #0f172a; border: 1px dashed #334155; border-radius: 12px; padding: 12px; margin: 12px 0; text-align: left; font-size: 12px; }
         .receipt-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.4); }
         .receipt-row:last-child { border-bottom: none; }
@@ -391,14 +520,22 @@
 <body>
 
 <div class="navbar">
-    <div class="brand" onclick="goHomePage()">
-        <img src="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png" alt="KTY Logo">
-        <span>KTY STORE</span>
-    </div>
-    <div id="authArea">
-        <button class="tg-btn" onclick="openLoginModal()">✈️ ចុះឈ្មោះតាម Telegram</button>
+    <div class="nav-inner">
+        <div class="brand" onclick="goHomePage()">
+            <img src="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png" alt="KTY Logo">
+            <span>KTY STORE</span>
+        </div>
+        <div id="authArea">
+            <button class="tg-btn" onclick="openLoginModal()">✈️ ចុះឈ្មោះតាម Telegram</button>
+        </div>
     </div>
 </div>
+
+<!-- ==================== ប៊ូតុង "ឆាត" នៅខាងក្រោមឆ្វេងដៃ ==================== -->
+<button class="floating-chat-btn" onclick="openChatModal()">
+    <span>💬 ឆាត</span>
+    <span id="chatUnreadBadge" class="chat-badge">0</span>
+</button>
 
 <div class="container">
     <!-- ==================== ទំព័រទី ១៖ ទំព័រដើម (HOME PAGE) ==================== -->
@@ -580,36 +717,42 @@
             <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
         </div>
 
-        <div class="game-hero">
-            <img id="heroGameImg" src="" alt="Game Logo">
-            <div class="game-hero-info">
-                <h2 id="heroGameName">Game Name</h2>
-                <div class="game-badges">
-                    <span class="badge-tag">⚡ បញ្ចូលរហ័ស</span>
-                    <span class="badge-tag">🇰🇭 គាំទ្រ KHQR</span>
+        <div class="detail-layout">
+            <div>
+                <div class="game-hero">
+                    <img id="heroGameImg" src="" alt="Game Logo">
+                    <div class="game-hero-info">
+                        <h2 id="heroGameName">Game Name</h2>
+                        <div class="game-badges">
+                            <span class="badge-tag">⚡ បញ្ចូលរហ័ស</span>
+                            <span class="badge-tag">🇰🇭 គាំទ្រ KHQR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="box" id="playerInputBox">
+                    <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
+                    <div id="dynamicInputs"></div>
+                    <div class="note-text" id="gameInputNote"></div>
                 </div>
             </div>
-        </div>
 
-        <div class="box" id="playerInputBox">
-            <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
-            <div id="dynamicInputs"></div>
-            <div class="note-text" id="gameInputNote"></div>
-        </div>
+            <div>
+                <div class="box">
+                    <div class="sec-title"><span class="step-num">2</span> ជ្រើសរើសកញ្ចប់ Item</div>
+                    <div class="items-grid" id="itemsGrid"></div>
+                </div>
 
-        <div class="box">
-            <div class="sec-title"><span class="step-num">2</span> ជ្រើសរើសកញ្ចប់ Item</div>
-            <div class="items-grid" id="itemsGrid"></div>
-        </div>
-
-        <div class="box">
-            <div class="sec-title"><span class="step-num">3</span> ផ្ទៀងផ្ទាត់ និងទូទាត់ប្រាក់</div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:10px; background:#090d16; border-radius:10px;">
-                <span style="color:#94a3b8; font-size:14px;">ត្រូវទូទាត់សរុប៖</span>
-                <span id="checkoutSummary" style="font-weight:bold; font-size:16px; color:#fbbf24;">$0.00</span>
+                <div class="box">
+                    <div class="sec-title"><span class="step-num">3</span> ផ្ទៀងផ្ទាត់ និងទូទាត់ប្រាក់</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:10px; background:#090d16; border-radius:10px;">
+                        <span style="color:#94a3b8; font-size:14px;">ត្រូវទូទាត់សរុប៖</span>
+                        <span id="checkoutSummary" style="font-weight:bold; font-size:16px; color:#fbbf24;">$0.00</span>
+                    </div>
+                    <button class="btn btn-buy" id="payBtn" onclick="createItemOrder()">ទូទាត់ប្រាក់តាម KHQR</button>
+                    <div id="orderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
+                </div>
             </div>
-            <button class="btn btn-buy" id="payBtn" onclick="createItemOrder()">ទូទាត់ប្រាក់តាម KHQR</button>
-            <div id="orderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
         </div>
     </div>
 
@@ -619,22 +762,61 @@
             <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
         </div>
 
-        <div class="acc-gallery" id="accDetailGallery"></div>
-        <div style="text-align:center; font-size:11px; color:#94a3b8; margin-bottom:12px;">👈 អូសឆ្វេង-ស្តាំ ដើម្បីមើលរូបភាពទាំងអស់ 👉</div>
-
-        <div class="box">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span id="accDetailGame" class="badge-tag">GAME</span>
-                <span id="accDetailStock" class="acc-stock stock-in">នៅសល់: 1</span>
+        <div class="detail-layout">
+            <div>
+                <div class="acc-gallery" id="accDetailGallery"></div>
+                <div style="text-align:center; font-size:11px; color:#94a3b8; margin-bottom:12px;">👈 អូសឆ្វេង-ស្តាំ ដើម្បីមើលរូបភាពទាំងអស់ 👉</div>
             </div>
-            <h2 id="accDetailTitle" style="font-size:19px; color:#fff; margin-bottom:8px;">Account Title</h2>
-            <div id="accDetailPrice" style="font-size:22px; font-weight:800; color:#fbbf24; margin-bottom:12px;">$0.00</div>
-            
-            <div style="font-size:13px; color:#cbd5e1; font-weight:bold; margin-bottom:4px;">📋 ព័ត៌មានលម្អិត៖</div>
-            <div id="accDetailDesc" class="note-text" style="margin-top:0; margin-bottom:16px; white-space:pre-line;"></div>
 
-            <button class="btn btn-buy" id="buyAccBtn" onclick="createAccountOrder()">ទិញគណនីនេះឥឡូវនេះ (KHQR)</button>
-            <div id="accOrderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
+            <div class="box">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span id="accDetailGame" class="badge-tag">GAME</span>
+                    <span id="accDetailStock" class="acc-stock stock-in">នៅសល់: 1</span>
+                </div>
+                <h2 id="accDetailTitle" style="font-size:19px; color:#fff; margin-bottom:8px;">Account Title</h2>
+                <div id="accDetailPrice" style="font-size:22px; font-weight:800; color:#fbbf24; margin-bottom:12px;">$0.00</div>
+                
+                <div style="font-size:13px; color:#cbd5e1; font-weight:bold; margin-bottom:4px;">📋 ព័ត៌មានលម្អិត៖</div>
+                <div id="accDetailDesc" class="note-text" style="margin-top:0; margin-bottom:16px; white-space:pre-line;"></div>
+
+                <button class="btn btn-buy" id="buyAccBtn" onclick="createAccountOrder()">ទិញគណនីនេះឥឡូវនេះ (KHQR)</button>
+                <div id="accOrderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== ផ្ទាំងឆាតឯកជនក្នុងវេបសាយ (IN-APP CHAT MODAL) ==================== -->
+<div class="chat-modal" id="chatModal">
+    <div class="chat-window">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <button id="chatBackToRoomsBtn" onclick="showAdminChatRoomsList()" style="display:none; background:none; border:none; color:#38bdf8; font-size:18px; cursor:pointer; margin-right:4px;">←</button>
+                <img id="chatHeaderAvatar" src="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png">
+                <div>
+                    <div id="chatHeaderTitle" style="font-weight:bold; font-size:14px; color:#fff;">KTY STORE (ម្ចាស់ហាង)</div>
+                    <div id="chatHeaderSub" style="font-size:11px; color:#10b981;">● ឆាតឯកជនក្នុងវេបសាយ</div>
+                </div>
+            </div>
+            <button onclick="closeChatModal()" style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
+        </div>
+
+        <!-- បញ្ជីអតិថិជនសម្រាប់តែ Admin (@ktyofficial169) -->
+        <div id="adminChatRoomsView" class="chat-rooms-list" style="display:none;"></div>
+
+        <!-- ផ្ទាំងសន្ទនា (Messages) -->
+        <div id="chatConversationView" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+            <div id="chatMessagesArea" class="chat-messages-area"></div>
+            <div id="chatRecordingStatus" style="display:none; background:#ef4444; color:#fff; font-size:11px; text-align:center; padding:4px;">
+                🎙️ កំពុងថតសំឡេង... ចុចប៊ូតុងមីក្រូហ្វូនម្តងទៀតដើម្បីផ្ញើ
+            </div>
+            <div class="chat-input-bar">
+                <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="sendChatImage(this)">
+                <button class="chat-icon-btn" title="ផ្ញើរូបភាព" onclick="document.getElementById('chatImageInput').click()">🖼️</button>
+                <button class="chat-icon-btn" id="chatVoiceBtn" title="ផ្ញើសំឡេង" onclick="toggleVoiceRecord()">🎤</button>
+                <input type="text" id="chatTextInput" class="chat-text-input" placeholder="សរសេរសារនៅទីនេះ..." onkeypress="if(event.key==='Enter') sendChatText()">
+                <button class="chat-send-btn" onclick="sendChatText()">ផ្ញើ</button>
+            </div>
         </div>
     </div>
 </div>
@@ -643,14 +825,14 @@
 <div class="modal" id="loginModal">
     <div class="modal-box">
         <h3 style="margin-bottom:8px;">✈️ ចុះឈ្មោះតាមគណនី Telegram</h3>
-        <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">ចុះឈ្មោះដើម្បីរក្សាទុកព័ត៌មានគណនីហ្គេមដែលអ្នកបានទិញ និងប្រវត្តិការទិញទាំងអស់</p>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">ចុះឈ្មោះដើម្បីរក្សាទុកព័ត៌មានគណនីហ្គេមដែលអ្នកបានទិញ និងជជែកជាមួយម្ចាស់ហាង</p>
         <div id="tgWidgetContainer" style="min-height:48px; display:flex; justify-content:center; align-items:center; margin-bottom:10px;"></div>
         <div id="loginError" style="color:#f43f5e; font-size:12px; margin-top:8px;"></div>
         <button style="background:none; border:none; color:#94a3b8; margin-top:12px; cursor:pointer;" onclick="closeModal('loginModal')">បិទ</button>
     </div>
 </div>
 
-<!-- Modal ប្រវត្តិការទិញរបស់អតិថិជន (រក្សាទុកព័ត៌មានគណនីហ្គេមដែលទិញរួចនៅទីនេះ) -->
+<!-- Modal ប្រវត្តិការទិញរបស់អតិថិជន -->
 <div class="modal" id="profileModal">
     <div class="modal-box">
         <h3 id="profileTitle" style="margin-bottom:4px;">គណនីរបស់ខ្ញុំ</h3>
@@ -682,7 +864,6 @@
             <button style="background:none; border:none; color:#94a3b8; margin-top:14px; cursor:pointer; text-decoration:underline;" onclick="closeQrModal()">បោះបង់ / បិទផ្ទាំងនេះ</button>
         </div>
 
-        <!-- ផ្ទាំងបញ្ជាក់ពេល KHQR ផុតកំណត់ -->
         <div id="expiredView" style="display:none; padding:10px 0;">
             <div style="font-size:44px; margin-bottom:10px;">⏳</div>
             <h3 style="color:#f43f5e; margin-bottom:8px;">កូដ KHQR នេះផុតកំណត់ហើយ!</h3>
@@ -690,7 +871,6 @@
             <button class="btn btn-buy" onclick="closeQrModal()">យល់ព្រម (បិទផ្ទាំងនេះ)</button>
         </div>
 
-        <!-- ទំព័រអរគុណ + បង្ហាញ Gmail & Password ភ្លាមៗ -->
         <div id="thankYouView" style="display:none;">
             <div class="check-circle">✓</div>
             <h2 style="color:#10b981; font-size:20px; margin-bottom:6px;">ការទូទាត់ជោគជ័យ!</h2>
@@ -745,6 +925,7 @@
 <script>
     const API_URL = "https://kty-store.onrender.com";
     const BOT_USERNAME = "KTYlogin_bot";
+    const SITE_LOGO = "https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png";
     const DEFAULT_GAME_ICON = "https://cdn-icons-png.flaticon.com/512/686/686589.png";
     const DEFAULT_ITEM_ICON = "https://cdn-icons-png.flaticon.com/512/616/616490.png";
 
@@ -767,13 +948,322 @@
     let editingAccountId = null;
     let uploadedAccImages = [];
 
+    // អថេរសម្រាប់ប្រព័ន្ធឆាត
+    let activeChatRoomId = null;
+    let chatPollTimer = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+
     window.onload = async () => {
         checkAuth();
         renderGames();
         await fetchStoreData();
         setInterval(nextBanner, 4000);
+        setInterval(checkChatUnreadBackground, 6000);
+        checkChatUnreadBackground();
     };
 
+    function isAdminUser() {
+        return currentUser && currentUser.username && currentUser.username.toLowerCase() === "ktyofficial169";
+    }
+
+    function getChatUserIdentity() {
+        if (currentUser && currentUser.id) {
+            return {
+                id: String(currentUser.id),
+                name: currentUser.first_name || "User",
+                username: currentUser.username || "",
+                photo: currentUser.photo_url || DEFAULT_GAME_ICON
+            };
+        }
+        let guestId = localStorage.getItem("kty_guest_chat_id");
+        if (!guestId) {
+            guestId = "guest_" + Math.floor(100000 + Math.random() * 900000);
+            localStorage.setItem("kty_guest_chat_id", guestId);
+        }
+        return {
+            id: guestId,
+            name: `ភ្ញៀវ #${guestId.slice(-4)}`,
+            username: "",
+            photo: DEFAULT_GAME_ICON
+        };
+    }
+
+    // ==================== មុខងារប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ ====================
+    async function checkChatUnreadBackground() {
+        const badge = document.getElementById("chatUnreadBadge");
+        try {
+            if (isAdminUser()) {
+                const res = await fetch(`${API_URL}/api/chat/admin/rooms`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (data.success && data.total_unread > 0) {
+                    badge.style.display = "inline-block";
+                    badge.innerText = data.total_unread;
+                } else {
+                    badge.style.display = "none";
+                }
+            } else {
+                const me = getChatUserIdentity();
+                const res = await fetch(`${API_URL}/api/chat/room`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ room_id: me.id, is_admin: false })
+                });
+                const data = await res.json();
+                if (data.success && data.unread_user > 0 && document.getElementById("chatModal").style.display !== "flex") {
+                    badge.style.display = "inline-block";
+                    badge.innerText = data.unread_user;
+                } else {
+                    badge.style.display = "none";
+                }
+            }
+        } catch (e) {}
+    }
+
+    function openChatModal() {
+        document.getElementById("chatModal").style.display = "flex";
+        if (isAdminUser()) {
+            showAdminChatRoomsList();
+        } else {
+            const me = getChatUserIdentity();
+            activeChatRoomId = me.id;
+            document.getElementById("chatBackToRoomsBtn").style.display = "none";
+            document.getElementById("adminChatRoomsView").style.display = "none";
+            document.getElementById("chatConversationView").style.display = "flex";
+            document.getElementById("chatHeaderAvatar").src = SITE_LOGO;
+            document.getElementById("chatHeaderTitle").innerText = "KTY STORE (ម្ចាស់វេបសាយ)";
+            document.getElementById("chatHeaderSub").innerText = "● ជជែកផ្ទាល់ជាមួយម្ចាស់ហាង";
+            loadChatMessages(true);
+        }
+
+        if (chatPollTimer) clearInterval(chatPollTimer);
+        chatPollTimer = setInterval(() => {
+            if (document.getElementById("chatModal").style.display !== "flex") return;
+            if (isAdminUser() && !activeChatRoomId) {
+                loadAdminChatRooms();
+            } else if (activeChatRoomId) {
+                loadChatMessages(false);
+            }
+        }, 3000);
+    }
+
+    function closeChatModal() {
+        document.getElementById("chatModal").style.display = "none";
+        if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+        checkChatUnreadBackground();
+    }
+
+    async function showAdminChatRoomsList() {
+        activeChatRoomId = null;
+        document.getElementById("chatBackToRoomsBtn").style.display = "none";
+        document.getElementById("chatConversationView").style.display = "none";
+        document.getElementById("adminChatRoomsView").style.display = "block";
+        document.getElementById("chatHeaderAvatar").src = SITE_LOGO;
+        document.getElementById("chatHeaderTitle").innerText = "ប្រអប់សារអតិថិជនទាំងអស់";
+        document.getElementById("chatHeaderSub").innerText = "● ជ្រើសរើសអតិថិជនដើម្បីឆាតតប";
+        await loadAdminChatRooms();
+    }
+
+    async function loadAdminChatRooms() {
+        const listEl = document.getElementById("adminChatRoomsView");
+        try {
+            const res = await fetch(`${API_URL}/api/chat/admin/rooms`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (data.success && data.rooms.length > 0) {
+                listEl.innerHTML = data.rooms.map(r => `
+                    <div class="chat-room-item" onclick="openAdminRoom('${r.room_id}', '${(r.user_name || 'User').replace(/'/g, "\\'")}', '${r.user_photo || ''}', '${r.user_username || ''}')">
+                        <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+                            <img src="${r.user_photo || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+                            <div style="overflow:hidden;">
+                                <div style="font-weight:bold; font-size:13px; color:#fff;">${r.user_name} ${r.user_username ? '(@' + r.user_username + ')' : ''}</div>
+                                <div style="font-size:11px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;">${r.last_preview || 'ចាប់ផ្តើមសន្ទនា'}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
+                            <div style="font-size:10px; color:#64748b;">${r.last_time}</div>
+                            ${r.unread_admin > 0 ? `<span style="background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold;">${r.unread_admin}</span>` : ''}
+                        </div>
+                    </div>
+                `).join("");
+            } else {
+                listEl.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:30px 10px; font-size:13px;">មិនទាន់មានអតិថិជនផ្ញើសារមកនៅឡើយទេ។</div>`;
+            }
+        } catch (e) {}
+    }
+
+    function openAdminRoom(roomId, userName, userPhoto, userUsername) {
+        activeChatRoomId = roomId;
+        document.getElementById("chatBackToRoomsBtn").style.display = "inline-block";
+        document.getElementById("adminChatRoomsView").style.display = "none";
+        document.getElementById("chatConversationView").style.display = "flex";
+        document.getElementById("chatHeaderAvatar").src = userPhoto || DEFAULT_GAME_ICON;
+        document.getElementById("chatHeaderTitle").innerText = userName;
+        document.getElementById("chatHeaderSub").innerText = userUsername ? `@${userUsername}` : `ID: ${roomId}`;
+        loadChatMessages(true);
+    }
+
+    async function loadChatMessages(scrollBottom) {
+        if (!activeChatRoomId) return;
+        const area = document.getElementById("chatMessagesArea");
+        const adminFlag = isAdminUser();
+        try {
+            const res = await fetch(`${API_URL}/api/chat/room`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ room_id: activeChatRoomId, is_admin: adminFlag })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const msgs = data.messages || [];
+                if (msgs.length === 0) {
+                    area.innerHTML = `<div style="text-align:center; color:#94a3b8; font-size:12px; margin-top:30px;">👋 សួស្តី! អ្នកអាចផ្ញើសារជាអក្សរ រូបភាព ឬសំឡេងនៅទីនេះបាន។</div>`;
+                    return;
+                }
+                const wasAtBottom = area.scrollHeight - area.scrollTop <= area.clientHeight + 60;
+                area.innerHTML = msgs.map(m => {
+                    const isMine = adminFlag ? m.is_admin : !m.is_admin;
+                    let contentHtml = "";
+                    if (m.type === "text") {
+                        contentHtml = `<div>${escapeHtml(m.text)}</div>`;
+                    } else if (m.type === "image") {
+                        contentHtml = `<img class="chat-img" src="${API_URL}/api/tg-image/${m.file_id}" onclick="window.open(this.src, '_blank')">`;
+                    } else if (m.type === "voice") {
+                        contentHtml = `<audio controls src="${API_URL}/api/tg-image/${m.file_id}"></audio>`;
+                    }
+                    const avatar = m.is_admin ? SITE_LOGO : (m.sender_photo || DEFAULT_GAME_ICON);
+                    return `
+                        <div class="msg-row ${isMine ? 'mine' : ''}">
+                            <img class="msg-avatar" src="${avatar}" onerror="this.src='${DEFAULT_GAME_ICON}'">
+                            <div class="msg-bubble">
+                                <div class="msg-sender">${m.is_admin ? '👑 KTY STORE' : escapeHtml(m.sender_name)}</div>
+                                ${contentHtml}
+                                <div class="msg-time">${m.time}</div>
+                            </div>
+                        </div>`;
+                }).join("");
+
+                if (scrollBottom || wasAtBottom) {
+                    area.scrollTop = area.scrollHeight;
+                }
+            }
+        } catch (e) {}
+    }
+
+    function escapeHtml(str) {
+        return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    async function sendChatText() {
+        const input = document.getElementById("chatTextInput");
+        const text = input.value.trim();
+        if (!text || !activeChatRoomId) return;
+        input.value = "";
+
+        const me = getChatUserIdentity();
+        const adminFlag = isAdminUser();
+        try {
+            await fetch(`${API_URL}/api/chat/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    room_id: activeChatRoomId,
+                    sender_id: me.id,
+                    sender_name: adminFlag ? "KTY STORE" : me.name,
+                    sender_username: me.username,
+                    sender_photo: adminFlag ? SITE_LOGO : me.photo,
+                    is_admin: adminFlag,
+                    msg_type: "text",
+                    text: text
+                })
+            });
+            await loadChatMessages(true);
+        } catch (e) {}
+    }
+
+    async function sendChatImage(input) {
+        const file = input.files[0];
+        if (!file || !activeChatRoomId) return;
+        input.value = "";
+
+        const me = getChatUserIdentity();
+        const adminFlag = isAdminUser();
+        const formData = new FormData();
+        formData.append("room_id", activeChatRoomId);
+        formData.append("sender_id", me.id);
+        formData.append("sender_name", adminFlag ? "KTY STORE" : me.name);
+        formData.append("sender_username", me.username);
+        formData.append("sender_photo", adminFlag ? SITE_LOGO : me.photo);
+        formData.append("is_admin", adminFlag ? "true" : "false");
+        formData.append("msg_type", "image");
+        formData.append("media", file);
+
+        try {
+            await fetch(`${API_URL}/api/chat/send`, { method: "POST", body: formData });
+            await loadChatMessages(true);
+        } catch (e) {
+            alert("មិនអាចផ្ញើរូបភាពបានទេ!");
+        }
+    }
+
+    async function toggleVoiceRecord() {
+        const btn = document.getElementById("chatVoiceBtn");
+        const statusEl = document.getElementById("chatRecordingStatus");
+
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            btn.classList.remove("recording");
+            statusEl.style.display = "none";
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                stream.getTracks().forEach(t => t.stop());
+                const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+                const me = getChatUserIdentity();
+                const adminFlag = isAdminUser();
+
+                const formData = new FormData();
+                formData.append("room_id", activeChatRoomId);
+                formData.append("sender_id", me.id);
+                formData.append("sender_name", adminFlag ? "KTY STORE" : me.name);
+                formData.append("sender_username", me.username);
+                formData.append("sender_photo", adminFlag ? SITE_LOGO : me.photo);
+                formData.append("is_admin", adminFlag ? "true" : "false");
+                formData.append("msg_type", "voice");
+                formData.append("media", audioBlob, "voice_message.webm");
+
+                try {
+                    await fetch(`${API_URL}/api/chat/send`, { method: "POST", body: formData });
+                    await loadChatMessages(true);
+                } catch (e) {}
+            };
+
+            mediaRecorder.start();
+            btn.classList.add("recording");
+            statusEl.style.display = "block";
+        } catch (e) {
+            alert("សូមអនុញ្ញាតសិទ្ធិប្រើមីក្រូហ្វូន (Microphone) លើ Browser ជាមុនសិន!");
+        }
+    }
+
+    // ==================== មុខងារហាង និងការទូទាត់ KHQR ====================
     function getUserOrdersKey() {
         return currentUser && currentUser.id ? `kty_orders_${String(currentUser.id)}` : "kty_orders_guest";
     }
@@ -925,7 +1415,7 @@
             const avatarHtml = currentUser.photo_url ? `<img src="${currentUser.photo_url}">` : `👤`;
             authArea.innerHTML = `<button class="tg-btn" style="background:#1e293b; border:1px solid #38bdf8;" onclick="openProfileModal()">${avatarHtml} <span>${displayTag}</span></button>`;
             
-            if (currentUser.username && currentUser.username.toLowerCase() === "ktyofficial169") {
+            if (isAdminUser()) {
                 adminPanel.style.display = "block";
                 loadAdminAccounts();
                 loadAdminOrders();
@@ -970,6 +1460,7 @@
                 checkAuth();
                 renderAdminLists();
                 closeModal("loginModal");
+                checkChatUnreadBackground();
             } else {
                 document.getElementById("loginError").innerText = data.error;
             }
@@ -978,7 +1469,6 @@
         }
     }
 
-    // បង្ហាញប្រវត្តិការទិញ & គណនីហ្គេមដែលបានទិញរួចទាំងអស់
     async function openProfileModal() {
         if (!currentUser) return;
         document.getElementById("profileTitle").innerText = currentUser.first_name;
@@ -1219,7 +1709,7 @@
     function renderAdminLists() {
         document.getElementById("adminBannerList").innerHTML = storeData.banners.map((url, idx) => `
             <div class="list-row">
-                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:190px;">Banner #${idx+1}: ${url}</span>
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">Banner #${idx+1}: ${url}</span>
                 <div class="row-actions">
                     <button class="btn-edit" onclick="editBanner(${idx})">✏️ កែ</button>
                     <button class="btn-danger" onclick="deleteBanner(${idx})">លុប</button>
@@ -1250,7 +1740,7 @@
             const g = storeData.games.find(x => x.id === item.game_id);
             return `
                 <div class="list-row">
-                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:190px;">[${g ? g.name : "Game"}] ${item.name} - $${item.price}</span>
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">[${g ? g.name : "Game"}] ${item.name} - $${item.price}</span>
                     <div class="row-actions">
                         <button class="btn-edit" onclick="editItem('${item.id}')">✏️ កែ</button>
                         <button class="btn-danger" onclick="deleteItem('${item.id}')">លុប</button>
@@ -1281,10 +1771,7 @@
             formData.append("photo", toUpload[i]);
 
             try {
-                const res = await fetch(`${API_URL}/api/upload-tg-image`, {
-                    method: "POST",
-                    body: formData
-                });
+                const res = await fetch(`${API_URL}/api/upload-tg-image`, { method: "POST", body: formData });
                 const data = await res.json();
                 if (data.success && data.file_id) {
                     uploadedAccImages.push(data.file_id);
@@ -1329,7 +1816,7 @@
                 adminAccountsCache = data.accounts;
                 document.getElementById("adminAccList").innerHTML = adminAccountsCache.map(a => `
                     <div class="list-row">
-                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:190px;">
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">
                             [${a.game_name}] ${a.title} ($${a.price} | ស្តុក:${a.stock})
                         </span>
                         <div class="row-actions">
@@ -1588,7 +2075,6 @@
         saveStoreToServer();
     }
 
-    // ==================== បង្កើត One-Time KHQR ថ្មីរាល់ពេលចុចទិញ ====================
     async function createItemOrder() {
         const errEl = document.getElementById("orderError");
         if (!selectedGame || !selectedItem) {
@@ -1732,13 +2218,12 @@
                     clearInterval(countdownTimer);
                     pollingTimer = null;
                     currentMD5 = "";
-                    // លុបរូបភាព QR ចេញភ្លាមៗក្រោយបង់ប្រាក់រួច ការពារកុំឱ្យស្កេនម្តងទៀត
                     document.getElementById("qrImgHolder").innerHTML = "";
 
                     saveOrderLocally(data.order);
                     showThankYouScreen(data.order);
                     fetchStoreData();
-                    if (currentUser && currentUser.username && currentUser.username.toLowerCase() === "ktyofficial169") {
+                    if (isAdminUser()) {
                         loadAdminOrders();
                         loadAdminAccounts();
                     }
