@@ -39,7 +39,7 @@ DEFAULT_DATA = {
             "input2_enabled": False,
             "input2_label": "",
             "input2_placeholder": "",
-            "input_note": "⚠️ សូមពិនិត្យ Username ឱ្យបានត្រឹមត្រូវ មុននឹងធ្វើការទូទាត់ប្រាក់។"
+            "input_note": "⚠️ សូមពិនិត្យ Username និងរូបភាព Avatar ឱ្យបានត្រឹមត្រូវ មុននឹងធ្វើការទូទាត់ប្រាក់។"
         }
     ],
     "items": [
@@ -155,6 +155,56 @@ def verify_telegram_auth(auth_data):
 def home():
     return send_file(os.path.join(BASE_DIR, 'index.html'))
 
+# ==================== API ពិនិត្យឈ្មោះ និងរូបភាព Avatar របស់គណនី Roblox ====================
+@app.route('/api/roblox/lookup', methods=['POST'])
+def roblox_lookup():
+    payload = request.get_json(silent=True) or {}
+    username = str(payload.get("username", "")).strip()
+    if not username:
+        return jsonify({"success": False, "error": "សូមបញ្ចូល Username ជាមុនសិន!"}), 400
+
+    try:
+        # 1. ទាញយកព័ត៌មាន User ពី Roblox Users API
+        u_res = requests.post(
+            "https://users.roblox.com/v1/usernames/users",
+            json={"usernames": [username], "excludeBannedUsers": False},
+            timeout=8
+        ).json()
+
+        users_list = u_res.get("data", [])
+        if not users_list:
+            return jsonify({"success": False, "error": "❌ រកមិនឃើញគណនី Roblox ឈ្មោះនេះទេ!"})
+
+        user_info = users_list[0]
+        user_id = user_info["id"]
+        real_username = user_info["name"]
+        display_name = user_info.get("displayName", real_username)
+
+        # 2. ទាញយករូបភាព Avatar Headshot ពី Roblox Thumbnails API
+        avatar_url = ""
+        try:
+            t_res = requests.get(
+                f"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={user_id}&size=150x150&format=Png&isCircular=false",
+                timeout=8
+            ).json()
+            t_data = t_res.get("data", [])
+            if t_data and t_data[0].get("imageUrl"):
+                avatar_url = t_data[0]["imageUrl"]
+        except Exception:
+            pass
+
+        return jsonify({
+            "success": True,
+            "user": {
+                "id": user_id,
+                "username": real_username,
+                "display_name": display_name,
+                "avatar_url": avatar_url
+            }
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": "មិនអាចភ្ជាប់ទៅ Roblox API បានទេ សូមព្យាយាមម្តងទៀត!"}), 500
+
 @app.route('/api/store', methods=['GET'])
 def get_store():
     d = load_data()
@@ -211,7 +261,7 @@ def serve_tg_image(file_id):
     except Exception as e:
         return str(e), 500
 
-# ==================== ប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Text Only - លឿន និងស្រាល) ====================
+# ==================== ប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Text Only) ====================
 @app.route('/api/chat/send', methods=['POST'])
 def chat_send():
     payload = request.get_json(silent=True) or {}
@@ -298,7 +348,6 @@ def chat_get_room():
         "unread_user": room.get("unread_user", 0)
     })
 
-# ទាញយកទាំង "អតិថិជនឆាតមកថ្មីៗ" និង "អតិថិជនទាំងអស់ដែលបានចុះឈ្មោះ" សម្រាប់ Admin
 @app.route('/api/chat/admin/overview', methods=['POST'])
 def chat_admin_overview():
     d = load_data()
@@ -308,7 +357,6 @@ def chat_admin_overview():
     recent_rooms = []
     total_unread = 0
 
-    # តម្រៀបបន្ទប់ឆាតតាមពេលវេលាចុងក្រោយ
     sorted_chats = sorted(chats.items(), key=lambda x: x[1].get("updated_ts", 0), reverse=True)
     for r_id, r_data in sorted_chats:
         msgs = r_data.get("messages", [])
@@ -327,7 +375,6 @@ def chat_admin_overview():
             "last_time": last_msg.get("time", "")
         })
 
-    # បញ្ជីអតិថិជនទាំងអស់ដែលបានចុះឈ្មោះក្នុងវេបសាយ (មិនរាប់បញ្ចូល Admin ខ្លួនឯង)
     all_users = []
     for u_id, u_data in users.items():
         if u_data.get("username", "").lower() == ADMIN_USERNAME:
