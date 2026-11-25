@@ -163,6 +163,40 @@ def roblox_lookup():
     except Exception:
         return jsonify({"success": False, "error": "មិនអាចភ្ជាប់ទៅ Roblox API បានទេ សូមព្យាយាមម្តងទៀត!"}), 500
 
+# ==================== API ពិនិត្យឈ្មោះគណនី MLBB & Free Fire ====================
+@app.route('/api/game/lookup', methods=['POST'])
+def game_lookup():
+    payload = request.get_json(silent=True) or {}
+    game_type = str(payload.get("game_type", "")).lower().strip()
+    user_id = str(payload.get("user_id", "")).strip()
+    zone_id = str(payload.get("zone_id", "")).strip()
+
+    if not user_id:
+        return jsonify({"success": False, "error": "សូមបញ្ចូល ID ហ្គេមជាមុនសិន!"}), 400
+
+    try:
+        if game_type == "mlbb":
+            if not zone_id:
+                return jsonify({"success": False, "error": "សូមបញ្ចូល Server / Zone ID ផង!"}), 400
+            url = f"https://api.isan.eu.org/nickname/ml?id={user_id}&zone={zone_id}"
+        elif game_type == "freefire":
+            url = f"https://api.isan.eu.org/nickname/ff?id={user_id}"
+        else:
+            return jsonify({"success": False, "error": "មិនគាំទ្រហ្គេមនេះទេ!"}), 400
+
+        res = requests.get(url, timeout=10).json()
+        if res.get("success") and res.get("name"):
+            return jsonify({
+                "success": True,
+                "nickname": res["name"],
+                "user_id": user_id,
+                "zone_id": zone_id
+            })
+        else:
+            return jsonify({"success": False, "error": "❌ រកមិនឃើញគណនីនេះទេ! សូមពិនិត្យ ID ឡើងវិញ។"})
+    except Exception:
+        return jsonify({"success": False, "error": "⚠️ ប្រព័ន្ធឆែកឈ្មោះកំពុងរវល់ ប៉ុន្តែអ្នកអាចបន្តទិញបានធម្មតា។"}), 500
+
 @app.route('/api/store', methods=['GET'])
 def get_store():
     d = load_data()
@@ -563,7 +597,6 @@ def check_payment():
     d = load_data()
     order = next((o for o in d["orders"] if o["md5"] == md5_hash), None)
 
-    # ប្រសិនបើ Server ទើប Restart ហើយបាត់ Order ពី Memory ឱ្យទាញពី fallback_order មកប្រើភ្លាម
     if not order and fallback_order:
         order = {
             "bill_number": fallback_order.get("bill_number", f"KTY-{int(time.time())}"),
