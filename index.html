@@ -296,7 +296,7 @@
         input:focus { border-color: #38bdf8; }
         .note-text { font-size: 12px; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 10px; margin-top: 8px; line-height: 1.4; }
 
-        /* កាតបង្ហាញប្រវត្តិរូប Avatar & ឈ្មោះគណនី Roblox */
+        /* Roblox Profile Card */
         .roblox-profile-card {
             display: none;
             margin-top: 10px;
@@ -328,7 +328,6 @@
             cursor: pointer;
             flex-shrink: 0;
         }
-        .roblox-check-btn:hover { background: #0369a1; }
 
         .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 768px) {
@@ -352,6 +351,24 @@
         .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; }
         .btn-buy { background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; }
         .btn-buy:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+        .btn-aba {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            background: #005d7b;
+            border: 1px solid #0ea5e9;
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            margin-top: 8px;
+            cursor: pointer;
+        }
+        .btn-aba:hover { background: #004961; }
         .btn-admin { background: #f59e0b; color: #000; padding: 8px 12px; font-size: 13px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .btn-edit { background: #0284c7; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
         .btn-danger { background: #ef4444; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
@@ -724,10 +741,7 @@
                 <div class="box" id="playerInputBox">
                     <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
                     <div id="dynamicInputs"></div>
-
-                    <!-- ប្រអប់បង្ហាញប្រវត្តិរូប Avatar និងឈ្មោះគណនី Roblox ដោយស្វ័យប្រវត្តិ -->
                     <div id="robloxProfileResult"></div>
-
                     <div class="note-text" id="gameInputNote"></div>
                 </div>
             </div>
@@ -739,12 +753,13 @@
                 </div>
 
                 <div class="box">
-                    <div class="sec-title"><span class="step-num">3</span> ផ្ទៀងផ្ទាត់ និងទូទាត់ប្រាក់</div>
+                    <div class="sec-title"><span class="step-num">3</span> ផ្ទៀងផ្ទាត់ និងបង់ប្រាក់</div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:10px; background:#090d16; border-radius:10px;">
-                        <span style="color:#94a3b8; font-size:14px;">ត្រូវទូទាត់សរុប៖</span>
+                        <span style="color:#94a3b8; font-size:14px;">ត្រូវបង់ប្រាក់សរុប៖</span>
                         <span id="checkoutSummary" style="font-weight:bold; font-size:16px; color:#fbbf24;">$0.00</span>
                     </div>
-                    <button class="btn btn-buy" id="payBtn" onclick="createItemOrder()">ទូទាត់ប្រាក់តាម KHQR</button>
+                    <!-- ប្តូរមកដាក់ពាក្យថា "បង់ប្រាក់" -->
+                    <button class="btn btn-buy" id="payBtn" onclick="createItemOrder()">បង់ប្រាក់</button>
                     <div id="orderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
                 </div>
             </div>
@@ -774,7 +789,8 @@
                 <div style="font-size:13px; color:#cbd5e1; font-weight:bold; margin-bottom:4px;">📋 ព័ត៌មានលម្អិត៖</div>
                 <div id="accDetailDesc" class="note-text" style="margin-top:0; margin-bottom:16px; white-space:pre-line;"></div>
 
-                <button class="btn btn-buy" id="buyAccBtn" onclick="createAccountOrder()">ទិញគណនីនេះឥឡូវនេះ (KHQR)</button>
+                <!-- ប្តូរមកដាក់ពាក្យថា "បង់ប្រាក់" -->
+                <button class="btn btn-buy" id="buyAccBtn" onclick="createAccountOrder()">បង់ប្រាក់</button>
                 <div id="accOrderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
             </div>
         </div>
@@ -885,19 +901,28 @@
     </div>
 </div>
 
-<!-- Modal បង្ហាញ One-Time KHQR និង ទំព័រទទួលព័ត៌មានគណនីភ្លាមៗ -->
+<!-- Modal បង្ហាញ KHQR + Auto-Open ABA Mobile / ថតស្កេនធម្មតា -->
 <div class="modal" id="qrModal">
     <div class="modal-box">
         <div id="qrView">
-            <div style="font-weight:bold; font-size:16px;">ស្កេនដើម្បីបង់ប្រាក់ (ប្រើបានតែ ១ ដង)</div>
+            <div style="font-weight:bold; font-size:16px;">ស្កេន ឬ បើក ABA ដើម្បីបង់ប្រាក់</div>
             <div id="qrOrderDesc" style="font-size:12px; color:#94a3b8; margin:4px 0 12px;"></div>
             <div style="background:#fff; color:#000; border-radius:12px; overflow:hidden; margin-bottom:10px;">
-                <div style="background:#e11d48; color:#fff; padding:8px; font-weight:bold;">KHQR (ONE-TIME)</div>
+                <div style="background:#e11d48; color:#fff; padding:8px; font-weight:bold;">KHQR</div>
                 <div style="padding-top:8px; font-weight:bold; font-size:14px;">KTY TOPUP STORE</div>
                 <div id="qrAmountText" style="font-size:22px; font-weight:bold; color:#e11d48;">$0.00</div>
-                <div id="qrImgHolder" style="padding:14px; display:flex; justify-content:center;"></div>
+                <div id="qrImgHolder" style="padding:12px; display:flex; justify-content:center;"></div>
                 <div id="qrCountdownText" style="padding-bottom:8px; font-size:11px; color:#e11d48; font-weight:bold;">សុពលភាព៖ 05:00</div>
             </div>
+
+            <!-- ប៊ូតុងបើក ABA ផ្ទាល់ (មិនបាច់ថតស្កេន) -->
+            <a id="abaDirectLink" href="#" class="btn-aba">
+                <span>🏦 បើកធនាគារ ABA ដើម្បីបង់ប្រាក់ភ្លាមៗ</span>
+            </a>
+            <div style="font-size:11px; color:#94a3b8; margin-top:6px;">
+                * ប្រសិនបើទូរសព្ទមិនមាន ABA អ្នកអាចថតអេក្រង់ (Screenshot) រូប QR ខាងលើ ដើម្បីស្កេនតាម App ធនាគារផ្សេងបានធម្មតា។
+            </div>
+
             <div class="scanning-indicator">
                 <div class="pulse-dot"></div>
                 <span>កំពុងរង់ចាំការទូទាត់ប្រាក់ដោយស្វ័យប្រវត្តិ...</span>
@@ -908,7 +933,7 @@
         <div id="expiredView" style="display:none; padding:10px 0;">
             <div style="font-size:44px; margin-bottom:10px;">⏳</div>
             <h3 style="color:#f43f5e; margin-bottom:8px;">កូដ KHQR នេះផុតកំណត់ហើយ!</h3>
-            <p style="font-size:13px; color:#cbd5e1; margin-bottom:16px;">ដើម្បីសុវត្ថិភាព កូដ KHQR នីមួយៗអាចប្រើបានតែម្តង និងមានសុពលភាព ៥ នាទីប៉ុណ្ណោះ។ សូមចុចទិញម្តងទៀតដើម្បីបង្កើតកូដថ្មី។</p>
+            <p style="font-size:13px; color:#cbd5e1; margin-bottom:16px;">ដើម្បីសុវត្ថិភាព កូដ KHQR នីមួយៗអាចប្រើបានតែម្តង និងមានសុពលភាព ៥ នាទីប៉ុណ្ណោះ។ សូមចុចបង់ប្រាក់ម្តងទៀតដើម្បីបង្កើតកូដថ្មី។</p>
             <button class="btn btn-buy" onclick="closeQrModal()">យល់ព្រម (បិទផ្ទាំងនេះ)</button>
         </div>
 
@@ -1360,7 +1385,7 @@
         }
     }
 
-    // ==================== មុខងារហាង និងការទូទាត់ KHQR ====================
+    // ==================== មុខងារហាង និងការទូទាត់ KHQR + Auto ABA ====================
     function getUserOrdersKey() {
         return currentUser && currentUser.id ? `kty_orders_${String(currentUser.id)}` : "kty_orders_guest";
     }
@@ -1509,7 +1534,7 @@
             stockEl.className = "acc-stock stock-in";
             stockEl.innerText = `នៅសល់ស្តុក៖ ${acc.stock}`;
             buyBtn.disabled = false;
-            buyBtn.innerText = `ទិញគណនីនេះឥឡូវនេះ ($${parseFloat(acc.price).toFixed(2)})`;
+            buyBtn.innerText = `បង់ប្រាក់ ($${parseFloat(acc.price).toFixed(2)})`;
         } else {
             stockEl.className = "acc-stock stock-out";
             stockEl.innerText = "អស់ស្តុក (Sold Out)";
@@ -1877,7 +1902,7 @@
         const progEl = document.getElementById("uploadProgressText");
 
         for (let i = 0; i < toUpload.length; i++) {
-            progEl.innerText = `⏳ កំពុងផ្ញើរូបទី ${i + 1}/${toUpload.length} ទៅ Telegram Cloud...`;
+            progEl.innerText = `⏳ កំពុងផ្ញើរូបទី ${i + 1}/${toUpload.length}...`;
             const formData = new FormData();
             formData.append("tg_id", String(currentUser.id));
             formData.append("photo", toUpload[i]);
@@ -1895,7 +1920,7 @@
                 alert("មិនអាចភ្ជាប់ទៅ Server ដើម្បី Upload រូបបានទេ!");
             }
         }
-        progEl.innerText = `✅ បានផ្ទុករូបភាពសរុប ${uploadedAccImages.length}/10 លើ Telegram`;
+        progEl.innerText = `✅ បានផ្ទុករូបភាពសរុប ${uploadedAccImages.length}/10`;
         input.value = "";
     }
 
@@ -2187,6 +2212,7 @@
         saveStoreToServer();
     }
 
+    // ==================== បង្កើត KHQR & លោតទៅ ABA Mobile ដោយស្វ័យប្រវត្តិ ====================
     async function createItemOrder() {
         const errEl = document.getElementById("orderError");
         if (!selectedGame || !selectedItem) {
@@ -2213,7 +2239,7 @@
         errEl.innerText = "";
         const payBtn = document.getElementById("payBtn");
         payBtn.disabled = true;
-        payBtn.innerText = "កំពុងបង្កើត KHQR ថ្មី...";
+        payBtn.innerText = "កំពុងរៀបចំការបង់ប្រាក់...";
 
         try {
             const res = await fetch(`${API_URL}/api/create-order`, {
@@ -2240,7 +2266,7 @@
             errEl.innerText = "មិនអាចភ្ជាប់ទៅ Server បានទេ!";
         } finally {
             payBtn.disabled = false;
-            payBtn.innerText = "ទូទាត់ប្រាក់តាម KHQR";
+            payBtn.innerText = "បង់ប្រាក់";
         }
     }
 
@@ -2251,7 +2277,7 @@
 
         errEl.innerText = "";
         buyBtn.disabled = true;
-        buyBtn.innerText = "កំពុងបង្កើត KHQR ថ្មី...";
+        buyBtn.innerText = "កំពុងរៀបចំការបង់ប្រាក់...";
 
         try {
             const res = await fetch(`${API_URL}/api/create-order`, {
@@ -2275,7 +2301,7 @@
             errEl.innerText = "មិនអាចភ្ជាប់ទៅ Server បានទេ!";
         } finally {
             buyBtn.disabled = false;
-            buyBtn.innerText = `ទិញគណនីនេះឥឡូវនេះ ($${parseFloat(selectedAccount.price).toFixed(2)})`;
+            buyBtn.innerText = `បង់ប្រាក់ ($${parseFloat(selectedAccount.price).toFixed(2)})`;
         }
     }
 
@@ -2286,6 +2312,14 @@
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(data.qr_string)}`;
         document.getElementById("qrImgHolder").innerHTML = `<img src="${qrUrl}" style="width:185px; height:185px;">`;
 
+        const abaBtn = document.getElementById("abaDirectLink");
+        if (data.aba_deeplink) {
+            abaBtn.href = data.aba_deeplink;
+            abaBtn.style.display = "flex";
+        } else {
+            abaBtn.style.display = "none";
+        }
+
         document.getElementById("qrView").style.display = "block";
         document.getElementById("expiredView").style.display = "none";
         document.getElementById("thankYouView").style.display = "none";
@@ -2293,6 +2327,15 @@
 
         startQrCountdown(data.expires_in || 300);
         startAutoPaymentCheck();
+
+        // ព្យាយាមលោតទៅធនាគារ ABA ដោយស្វ័យប្រវត្តិ (ប្រសិនបើទូរសព្ទមាន ABA វានឹងបើកភ្លាម តែបើអត់មាន វានៅបង្ហាញផ្ទាំង QR ឱ្យថតស្កេនធម្មតា)
+        if (data.aba_deeplink) {
+            setTimeout(() => {
+                try {
+                    window.location.href = data.aba_deeplink;
+                } catch (e) {}
+            }, 350);
+        }
     }
 
     function startQrCountdown(seconds) {
@@ -2313,7 +2356,7 @@
             }
             const m = String(Math.floor(left / 60)).padStart(2, '0');
             const s = String(left % 60).padStart(2, '0');
-            el.innerText = `សុពលភាពប្រើបានតែម្តង៖ ${m}:${s}`;
+            el.innerText = `សុពលភាព៖ ${m}:${s}`;
         }, 1000);
     }
 
