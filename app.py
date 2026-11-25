@@ -12,9 +12,11 @@ import os
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Bakong Token ថ្មី (មានសុពលភាពដល់ 31 Dec 2026) & Telegram Bot
+# Bakong Token ថ្មី (មានសុពលភាពដល់ 31 Dec 2026) & គណនី ABA ទទួលប្រាក់ផ្ទាល់
 BAKONG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYTYwNGFhZjliNmRlNGMzNyJ9LCJpYXQiOjE3OTA5ODA1MzgsImV4cCI6MTc5ODc1NjUzOH0.JVGnd51f_4MWB3nUu_OwtEmeo9FjJgy9BypFytO053I"
-BAKONG_ID = "topup_kty@bkrt"
+ABA_ROUTING_ID = "abaakhppxxx@abaa"
+ABA_ACCOUNT_NO = "010765908"
+ABA_ACCOUNT_NAME = "BROSNO PHON"
 
 TG_BOT_TOKEN = "8681603461:AAHTBdVpAVAMxaDF7pZfiSwn9SPrN6w7kqM"
 TG_GROUP_ID = "-1005852775918"
@@ -34,9 +36,49 @@ DEFAULT_DATA = {
     "chats": {}
 }
 
+def crc16_ccitt(data: str) -> str:
+    """គណនាកូដសុវត្ថិភាព CRC-16 សម្រាប់ KHQR"""
+    crc = 0xFFFF
+    for byte in data.encode('utf-8'):
+        crc ^= (byte << 8)
+        for _ in range(8):
+            if crc & 0x8000:
+                crc = ((crc << 1) ^ 0x1021) & 0xFFFF
+            else:
+                crc = (crc << 1) & 0xFFFF
+    return f"{crc:04X}"
+
+def build_aba_khqr(amount_usd: float, bill_no: str, nonce: str) -> str:
+    """បង្កើត KHQR បាញ់ប្រាក់ចូលគណនី ABA (010765908 - BROSNO PHON) ដោយផ្ទាល់"""
+    raw_qr = khqr.create_qr(
+        account_id=ABA_ROUTING_ID,
+        merchant_name=ABA_ACCOUNT_NAME,
+        merchant_city="Phnom Penh",
+        amount=round(amount_usd, 2),
+        currency="USD",
+        store_label=f"KTY-{nonce}",
+        phone_number="85510765908",
+        bill_number=bill_no,
+        terminal_label=f"T-{nonce}",
+        static=False
+    )
+    # បញ្ចូលលេខគណនី ABA 010765908 ទៅក្នុង Tag 29 ឱ្យត្រូវតាមស្តង់ដារធនាគារ ABA
+    base_tag29 = f"29{len(ABA_ROUTING_ID)+4:02d}00{len(ABA_ROUTING_ID):02d}{ABA_ROUTING_ID}"
+    aba_subtags = (
+        f"00{len(ABA_ROUTING_ID):02d}{ABA_ROUTING_ID}"
+        f"01{len(ABA_ACCOUNT_NO):02d}{ABA_ACCOUNT_NO}"
+        f"0208ABA Bank"
+    )
+    full_tag29 = f"29{len(aba_subtags):02d}{aba_subtags}"
+
+    if base_tag29 in raw_qr and "6304" in raw_qr:
+        updated_qr = raw_qr.replace(base_tag29, full_tag29, 1)
+        qr_body = updated_qr.split("6304")[0] + "6304"
+        return qr_body + crc16_ccitt(qr_body)
+    return raw_qr
+
 # ==================== ទាញយកទិន្នន័យចាស់ដែលអ្នកបានរៀបចំរួចរាល់ ====================
 def load_initial_from_telegram_pinned():
-    """ទាញយកទិន្នន័យចុងក្រោយដែលអ្នកបានរៀបចំទុក ដោយមិនបង្ហោះ File ថ្មីចូល Group ទៀតទេ"""
     try:
         res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=8).json()
         if res.get("ok"):
@@ -78,16 +120,13 @@ def load_data():
     return DEFAULT_DATA
 
 def save_data(data):
-    """រក្សាទុកទិន្នន័យក្នុង Server ផ្ទាល់ ដោយមិនផ្ញើឯកសារ (File) ចូល Telegram Group ឡើយ"""
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# ផ្ទុកទិន្នន័យចាស់របស់អ្នកភ្លាមៗពេល Server ចាប់ផ្តើម
 if not os.path.exists(DATA_FILE):
     load_initial_from_telegram_pinned()
 
 def send_telegram_group(text):
-    """ផ្ញើតែសារជូនដំណឹងសំខាន់ៗ (សមាជិកថ្មី និងការបង់ប្រាក់ជោគជ័យ PAID)"""
     try:
         url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
         requests.post(url, json={
@@ -385,7 +424,7 @@ def chat_admin_overview():
         "total_unread": total_unread
     })
 
-# ==================== ការគ្រប់គ្រងគណនីហ្គេម & ការទូទាត់ KHQR ====================
+# ==================== ការគ្រប់គ្រងគណនីហ្គេម & ការទូទាត់ KHQR ចូល ABA ====================
 @app.route('/api/admin/accounts', methods=['POST'])
 def get_admin_accounts():
     d = load_data()
@@ -528,18 +567,7 @@ def create_order():
         unique_nonce = uuid.uuid4().hex[:6].upper()
         bill_no = f"KTY-{int(time.time())}-{unique_nonce}"
         
-        qr_string = khqr.create_qr(
-            account_id=BAKONG_ID,
-            merchant_name="KTY TOPUP STORE",
-            merchant_city="Phnom Penh",
-            amount=round(price_usd, 2),
-            currency="USD",
-            store_label=f"KTY-{unique_nonce}",
-            phone_number="855979556757",
-            bill_number=bill_no,
-            terminal_label=f"T-{unique_nonce}",
-            static=False
-        )
+        qr_string = build_aba_khqr(price_usd, bill_no, unique_nonce)
         md5_hash = khqr.generate_md5(qr_string)
 
         # បង្កើត Deep Link សម្រាប់បើក ABA Mobile ដោយស្វ័យប្រវត្តិ
@@ -659,7 +687,7 @@ def check_payment():
                     f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>\n"
                     f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
                     f"🏷️ ឈ្មោះគណនី៖ <b>{order['item_name']}</b>\n"
-                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b>\n"
+                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b> (ចូល ABA)\n"
                     f"👤 អ្នកទិញ៖ {buyer_text}\n"
                     f"📧 User/Gmail៖ <code>{order.get('delivered_login', '')}</code>\n"
                     f"🔑 Password៖ <code>{order.get('delivered_password', '')}</code>\n"
@@ -673,7 +701,7 @@ def check_payment():
                     f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
                     f"💎 កញ្ចប់ Item៖ <b>{order['item_name']}</b>\n"
                     f"🆔 គណនីហ្គេម៖ <code>{order['player_info']}</code>\n"
-                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b>\n"
+                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b> (ចូល ABA)\n"
                     f"👤 អ្នកទិញ៖ {buyer_text}\n"
                     f"⏰ ម៉ោងបង់ប្រាក់៖ {order['paid_at']}"
                 )
