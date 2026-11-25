@@ -1034,7 +1034,7 @@
         renderGames();
         await fetchStoreData();
         setInterval(nextBanner, 4000);
-        setInterval(checkChatUnreadBackground, 6000);
+        setInterval(checkChatUnreadBackground, 8000);
         checkChatUnreadBackground();
     };
 
@@ -1148,7 +1148,7 @@
             } else if (activeChatRoomId) {
                 loadChatMessages(false);
             }
-        }, 3000);
+        }, 3500);
     }
 
     function closeChatModal() {
@@ -2418,9 +2418,10 @@
         } catch (e) {}
     }
 
+    // ផ្ទៀងផ្ទាត់រៀងរាល់ ១៥ វិនាទីម្តង ដើម្បីសន្សំសំចៃកូតា 100 requests/day របស់ Bakong
     function startAutoPaymentCheck() {
         if (pollingTimer) clearInterval(pollingTimer);
-        pollingTimer = setInterval(checkPaymentOnce, 3000);
+        pollingTimer = setInterval(checkPaymentOnce, 15000);
     }
 
     // ពិនិត្យការបង់ប្រាក់ភ្លាមៗនៅពេលភ្ញៀវត្រឡប់ពី App ABA មកកាន់ Browser វិញ
