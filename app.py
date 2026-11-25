@@ -25,40 +25,18 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'store_data.json')
 
 DEFAULT_DATA = {
-    "banners": [
-        "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1280&q=80"
-    ],
-    "games": [
-        {
-            "id": "game_1",
-            "name": "Roblox",
-            "image": "https://cdn-icons-png.flaticon.com/512/686/686589.png",
-            "input1_enabled": True,
-            "input1_label": "Roblox Username",
-            "input1_placeholder": "បញ្ចូលឈ្មោះគណនី Roblox...",
-            "input2_enabled": False,
-            "input2_label": "",
-            "input2_placeholder": "",
-            "input_note": "⚠️ សូមពិនិត្យ Username និងរូបភាព Avatar ឱ្យបានត្រឹមត្រូវ មុននឹងធ្វើការទូទាត់ប្រាក់។"
-        }
-    ],
-    "items": [
-        {
-            "id": "item_1",
-            "game_id": "game_1",
-            "name": "80 Robux",
-            "price": 1.00,
-            "image": "https://cdn-icons-png.flaticon.com/512/616/616490.png"
-        }
-    ],
+    "banners": [],
+    "games": [],
+    "items": [],
     "accounts": [],
     "users": {},
     "orders": [],
     "chats": {}
 }
 
-# ==================== ប្រព័ន្ធរក្សាទុកទិន្នន័យលើ Telegram Cloud ====================
-def sync_from_telegram():
+# ==================== ទាញយកទិន្នន័យចាស់ដែលអ្នកបានរៀបចំរួចរាល់ ====================
+def load_initial_from_telegram_pinned():
+    """ទាញយកទិន្នន័យចុងក្រោយដែលអ្នកបានរៀបចំទុក ដោយមិនបង្ហោះ File ថ្មីចូល Group ទៀតទេ"""
     try:
         res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=8).json()
         if res.get("ok"):
@@ -78,28 +56,8 @@ def sync_from_telegram():
                             json.dump(raw, f, ensure_ascii=False, indent=2)
                         return raw
     except Exception as e:
-        print("Sync from Telegram failed:", e)
+        print("Initial load note:", e)
     return None
-
-def backup_to_telegram(data):
-    try:
-        json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
-        files = {'document': ('kty_store_db.json', json_bytes, 'application/json')}
-        payload = {
-            'chat_id': TG_GROUP_ID,
-            'caption': '🗄️ KTY STORE DATABASE (កុំលុបសារនេះ)',
-            'disable_notification': True
-        }
-        res = requests.post(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendDocument", files=files, data=payload, timeout=15).json()
-        if res.get("ok"):
-            msg_id = res["result"]["message_id"]
-            requests.post(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/pinChatMessage", json={
-                'chat_id': TG_GROUP_ID,
-                'message_id': msg_id,
-                'disable_notification': True
-            }, timeout=5)
-    except Exception as e:
-        print("Backup to Telegram failed:", e)
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -111,23 +69,25 @@ def load_data():
                 d.setdefault("orders", [])
                 d.setdefault("chats", {})
                 return d
-        except:
+        except Exception:
             pass
-    cloud_data = sync_from_telegram()
+    cloud_data = load_initial_from_telegram_pinned()
     if cloud_data:
         return cloud_data
-    save_data(DEFAULT_DATA, sync_cloud=False)
+    save_data(DEFAULT_DATA)
     return DEFAULT_DATA
 
-def save_data(data, sync_cloud=True):
+def save_data(data):
+    """រក្សាទុកទិន្នន័យក្នុង Server ផ្ទាល់ ដោយមិនផ្ញើឯកសារ (File) ចូល Telegram Group ឡើយ"""
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    if sync_cloud:
-        backup_to_telegram(data)
 
-sync_from_telegram()
+# ផ្ទុកទិន្នន័យចាស់របស់អ្នកភ្លាមៗពេល Server ចាប់ផ្តើម
+if not os.path.exists(DATA_FILE):
+    load_initial_from_telegram_pinned()
 
 def send_telegram_group(text):
+    """ផ្ញើតែសារជូនដំណឹងសំខាន់ៗ (សមាជិកថ្មី និងការបង់ប្រាក់ជោគជ័យ PAID)"""
     try:
         url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
         requests.post(url, json={
@@ -164,7 +124,6 @@ def roblox_lookup():
         return jsonify({"success": False, "error": "សូមបញ្ចូល Username ជាមុនសិន!"}), 400
 
     try:
-        # 1. ទាញយកព័ត៌មាន User ពី Roblox Users API
         u_res = requests.post(
             "https://users.roblox.com/v1/usernames/users",
             json={"usernames": [username], "excludeBannedUsers": False},
@@ -180,7 +139,6 @@ def roblox_lookup():
         real_username = user_info["name"]
         display_name = user_info.get("displayName", real_username)
 
-        # 2. ទាញយករូបភាព Avatar Headshot ពី Roblox Thumbnails API
         avatar_url = ""
         try:
             t_res = requests.get(
@@ -202,7 +160,7 @@ def roblox_lookup():
                 "avatar_url": avatar_url
             }
         })
-    except Exception as e:
+    except Exception:
         return jsonify({"success": False, "error": "មិនអាចភ្ជាប់ទៅ Roblox API បានទេ សូមព្យាយាមម្តងទៀត!"}), 500
 
 @app.route('/api/store', methods=['GET'])
@@ -236,7 +194,6 @@ def upload_tg_image():
         files = {'photo': (photo_file.filename, photo_file.stream, photo_file.mimetype)}
         data = {
             'chat_id': TG_GROUP_ID,
-            'caption': '🖼️ រូបភាពស្តុកគណនីហ្គេម (Telegram Cloud Storage)',
             'disable_notification': True
         }
         res = requests.post(url, files=files, data=data, timeout=20).json()
@@ -318,7 +275,7 @@ def chat_send():
     if len(room["messages"]) > 150:
         room["messages"] = room["messages"][-150:]
 
-    save_data(d, sync_cloud=True)
+    save_data(d)
     return jsonify({"success": True, "message": msg_obj})
 
 @app.route('/api/chat/room', methods=['POST'])
@@ -340,7 +297,7 @@ def chat_get_room():
         changed = True
 
     if changed:
-        save_data(d, sync_cloud=False)
+        save_data(d)
 
     return jsonify({
         "success": True,
@@ -428,7 +385,7 @@ def save_admin_account():
     else:
         d["accounts"].append(new_acc)
 
-    save_data(d, sync_cloud=True)
+    save_data(d)
     return jsonify({"success": True})
 
 @app.route('/api/admin/account/delete', methods=['POST'])
@@ -437,7 +394,7 @@ def delete_admin_account():
     acc_id = payload.get("acc_id")
     d = load_data()
     d["accounts"] = [a for a in d["accounts"] if a["id"] != acc_id]
-    save_data(d, sync_cloud=True)
+    save_data(d)
     return jsonify({"success": True})
 
 @app.route('/api/auth/telegram', methods=['POST'])
@@ -462,7 +419,7 @@ def auth_telegram():
         "photo_url": photo_url,
         "joined_at": time.strftime("%Y-%m-%d %H:%M:%S")
     }
-    save_data(d, sync_cloud=True)
+    save_data(d)
 
     if is_new:
         msg = (
@@ -497,7 +454,7 @@ def update_store():
         d["banners"] = new_data.get("banners", d["banners"])
         d["games"] = new_data.get("games", d["games"])
         d["items"] = new_data.get("items", d["items"])
-        save_data(d, sync_cloud=True)
+        save_data(d)
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Invalid data"}), 400
 
@@ -551,6 +508,14 @@ def create_order():
         )
         md5_hash = khqr.generate_md5(qr_string)
 
+        # បង្កើត Deep Link សម្រាប់បើក ABA Mobile ដោយស្វ័យប្រវត្តិ
+        aba_deeplink = khqr.generate_deeplink(
+            qr_string,
+            callback="https://ktytes.netlify.app",
+            appIconUrl="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png",
+            appName="KTY STORE"
+        )
+
         order_record = {
             "bill_number": bill_no,
             "md5": md5_hash,
@@ -569,11 +534,12 @@ def create_order():
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         d["orders"].append(order_record)
-        save_data(d, sync_cloud=False)
+        save_data(d)
 
         return jsonify({
             "success": True,
             "qr_string": qr_string,
+            "aba_deeplink": aba_deeplink,
             "md5": md5_hash,
             "amount": round(price_usd, 2),
             "bill_number": bill_no,
@@ -600,7 +566,7 @@ def check_payment():
     if time.time() - order.get("created_ts", 0) > 300:
         order["status"] = "EXPIRED"
         order["used"] = True
-        save_data(d, sync_cloud=False)
+        save_data(d)
         return jsonify({"success": True, "status": "EXPIRED"})
 
     try:
@@ -618,7 +584,7 @@ def check_payment():
                     if acc["stock"] > 0:
                         acc["stock"] -= 1
 
-            save_data(d, sync_cloud=True)
+            save_data(d)
 
             if order["tg_id"] == "GUEST":
                 buyer_text = "ភ្ញៀវទូទៅ (Guest)"
