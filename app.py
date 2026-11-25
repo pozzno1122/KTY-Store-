@@ -12,8 +12,8 @@ import os
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# ការកំណត់ Bakong & Telegram Bot
-BAKONG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYzYxMWEyYTY2YzUxNDNlNSJ9LCJpYXQiOjE3ODkzMTA4MzMsImV4cCI6MTc5NzA4NjgzM30.TId975LLnYAV3D4BUuJJWxuRU_A4dyyVW28lxNEwwYs"
+# Bakong Token ថ្មី (មានសុពលភាពដល់ 31 Dec 2026) & Telegram Bot
+BAKONG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYTYwNGFhZjliNmRlNGMzNyJ9LCJpYXQiOjE3OTA5ODA1MzgsImV4cCI6MTc5ODc1NjUzOH0.JVGnd51f_4MWB3nUu_OwtEmeo9FjJgy9BypFytO053I"
 BAKONG_ID = "topup_kty@bkrt"
 
 TG_BOT_TOKEN = "8681603461:AAHTBdVpAVAMxaDF7pZfiSwn9SPrN6w7kqM"
