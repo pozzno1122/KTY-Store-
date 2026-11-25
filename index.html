@@ -296,7 +296,7 @@
         input:focus { border-color: #38bdf8; }
         .note-text { font-size: 12px; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 10px; margin-top: 8px; line-height: 1.4; }
 
-        /* Roblox Profile Card */
+        /* កាតបង្ហាញប្រវត្តិរូប Avatar & ឈ្មោះគណនី (Roblox / MLBB / Free Fire) */
         .roblox-profile-card {
             display: none;
             margin-top: 10px;
@@ -328,6 +328,7 @@
             cursor: pointer;
             flex-shrink: 0;
         }
+        .roblox-check-btn:hover { background: #0369a1; }
 
         .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 768px) {
@@ -741,6 +742,7 @@
                 <div class="box" id="playerInputBox">
                     <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
                     <div id="dynamicInputs"></div>
+                    <!-- ប្រអប់បង្ហាញប្រវត្តិរូប Avatar & ឈ្មោះគណនី (Roblox / MLBB / Free Fire) -->
                     <div id="robloxProfileResult"></div>
                     <div class="note-text" id="gameInputNote"></div>
                 </div>
@@ -1010,7 +1012,8 @@
     let selectedItem = null;
     let selectedAccount = null;
     let verifiedRobloxUser = null;
-    let robloxLookupDebounce = null;
+    let verifiedGameNickname = null;
+    let lookupDebounceTimer = null;
 
     let currentMD5 = "";
     let currentOrderPayload = null;
@@ -1324,15 +1327,20 @@
         } catch (e) {}
     }
 
-    // ==================== មុខងារពិនិត្យឈ្មោះ និងរូបភាព Avatar របស់ Roblox ====================
-    function isRobloxGame(game) {
-        return game && game.name && game.name.toLowerCase().includes("roblox");
+    // ==================== មុខងារពិនិត្យឈ្មោះគណនី (Roblox / MLBB / Free Fire) ====================
+    function getLookupGameType(game) {
+        if (!game || !game.name) return null;
+        const n = game.name.toLowerCase();
+        if (n.includes("roblox")) return "roblox";
+        if (n.includes("mlbb") || n.includes("mobile legends")) return "mlbb";
+        if (n.includes("free fire") || n.includes("ff")) return "freefire";
+        return null;
     }
 
     function onRobloxInputTyping() {
         verifiedRobloxUser = null;
-        if (robloxLookupDebounce) clearTimeout(robloxLookupDebounce);
-        robloxLookupDebounce = setTimeout(() => {
+        if (lookupDebounceTimer) clearTimeout(lookupDebounceTimer);
+        lookupDebounceTimer = setTimeout(() => {
             lookupRobloxProfile(true);
         }, 700);
     }
@@ -1384,6 +1392,73 @@
         }
     }
 
+    function onGameIdTyping() {
+        verifiedGameNickname = null;
+        if (lookupDebounceTimer) clearTimeout(lookupDebounceTimer);
+        lookupDebounceTimer = setTimeout(() => {
+            const gType = getLookupGameType(selectedGame);
+            const idEl = document.getElementById("custInput1");
+            const zoneEl = document.getElementById("custInput2");
+            if (!idEl || !idEl.value.trim()) return;
+            if (gType === "mlbb" && (!zoneEl || !zoneEl.value.trim())) return;
+            lookupGameNickname(true);
+        }, 800);
+    }
+
+    async function lookupGameNickname(isAuto = false) {
+        const gType = getLookupGameType(selectedGame);
+        const resultEl = document.getElementById("robloxProfileResult");
+        const idEl = document.getElementById("custInput1");
+        const zoneEl = document.getElementById("custInput2");
+        if (!idEl || !resultEl) return;
+
+        const uid = idEl.value.trim();
+        const zid = zoneEl ? zoneEl.value.trim() : "";
+
+        if (!uid) {
+            if (!isAuto) resultEl.innerHTML = `<div style="font-size:12px; color:#f43f5e; margin-top:8px;">⚠️ សូមបញ្ចូល ID ជាមុនសិន!</div>`;
+            return;
+        }
+        if (gType === "mlbb" && !zid) {
+            if (!isAuto) resultEl.innerHTML = `<div style="font-size:12px; color:#f43f5e; margin-top:8px;">⚠️ សូមបញ្ចូល Server / Zone ID ផង!</div>`;
+            return;
+        }
+
+        resultEl.innerHTML = `<div style="font-size:12px; color:#38bdf8; margin-top:8px;">⏳ កំពុងពិនិត្យឈ្មោះគណនី...</div>`;
+
+        try {
+            const res = await fetch(`${API_URL}/api/game/lookup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ game_type: gType, user_id: uid, zone_id: zid })
+            });
+            const data = await res.json();
+
+            if (data.success && data.nickname) {
+                verifiedGameNickname = data.nickname;
+                resultEl.innerHTML = `
+                    <div class="roblox-profile-card" style="display:flex;">
+                        <img src="${selectedGame.image || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'" style="border-radius:12px;">
+                        <div style="text-align:left; overflow:hidden;">
+                            <div style="font-size:11px; color:#10b981; font-weight:bold;">✅ រកឃើញគណនីត្រឹមត្រូវ</div>
+                            <div style="font-size:15px; font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(data.nickname)}</div>
+                            <div style="font-size:11px; color:#cbd5e1;">ID: ${escapeHtml(uid)} ${zid ? '(' + escapeHtml(zid) + ')' : ''}</div>
+                        </div>
+                    </div>`;
+            } else {
+                verifiedGameNickname = null;
+                resultEl.innerHTML = `<div style="font-size:12px; color:#f43f5e; margin-top:8px; background:rgba(239,68,68,0.1); padding:8px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">${escapeHtml(data.error || "រកមិនឃើញគណនីនេះទេ!")}</div>`;
+            }
+        } catch (e) {
+            verifiedGameNickname = null;
+            if (!isAuto) {
+                resultEl.innerHTML = `<div style="font-size:12px; color:#fbbf24; margin-top:8px; background:rgba(251,191,36,0.1); padding:8px 10px; border-radius:8px;">⚠️ ប្រព័ន្ធឆែកឈ្មោះកំពុងរវល់ តែអ្នកអាចបន្តបង់ប្រាក់បានធម្មតា។</div>`;
+            } else {
+                resultEl.innerHTML = "";
+            }
+        }
+    }
+
     // ==================== មុខងារហាង និងការទូទាត់ KHQR + Auto ABA ====================
     function getUserOrdersKey() {
         return currentUser && currentUser.id ? `kty_orders_${String(currentUser.id)}` : "kty_orders_guest";
@@ -1407,6 +1482,7 @@
         selectedItem = null;
         selectedAccount = null;
         verifiedRobloxUser = null;
+        verifiedGameNickname = null;
         document.getElementById("gameDetailView").style.display = "none";
         document.getElementById("accountDetailView").style.display = "none";
         document.getElementById("homePageView").style.display = "block";
@@ -1417,6 +1493,7 @@
         selectedGame = game;
         selectedItem = null;
         verifiedRobloxUser = null;
+        verifiedGameNickname = null;
 
         document.getElementById("homePageView").style.display = "none";
         document.getElementById("accountDetailView").style.display = "none";
@@ -1435,9 +1512,11 @@
         robloxResEl.innerHTML = "";
         let hasInput = false;
 
+        const gType = getLookupGameType(game);
+
         if (game.input1_enabled) {
             hasInput = true;
-            if (isRobloxGame(game)) {
+            if (gType === "roblox") {
                 dynInputs.innerHTML += `
                     <div class="input-group">
                         <label>${game.input1_label || "Roblox Username"}</label>
@@ -1445,6 +1524,21 @@
                             <input type="text" id="custInput1" placeholder="${game.input1_placeholder || "បញ្ចូលឈ្មោះគណនី Roblox..."}" oninput="onRobloxInputTyping()">
                             <button type="button" class="roblox-check-btn" onclick="lookupRobloxProfile(false)">🔍 ឆែកឈ្មោះ</button>
                         </div>
+                    </div>`;
+            } else if (gType === "freefire" || (gType === "mlbb" && !game.input2_enabled)) {
+                dynInputs.innerHTML += `
+                    <div class="input-group">
+                        <label>${game.input1_label || "Player ID"}</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="custInput1" placeholder="${game.input1_placeholder || "បញ្ចូល ID ហ្គេម..."}" oninput="onGameIdTyping()">
+                            <button type="button" class="roblox-check-btn" onclick="lookupGameNickname(false)">🔍 ឆែកឈ្មោះ</button>
+                        </div>
+                    </div>`;
+            } else if (gType === "mlbb") {
+                dynInputs.innerHTML += `
+                    <div class="input-group">
+                        <label>${game.input1_label || "User ID"}</label>
+                        <input type="text" id="custInput1" placeholder="${game.input1_placeholder || "បញ្ចូល User ID..."}" oninput="onGameIdTyping()">
                     </div>`;
             } else {
                 dynInputs.innerHTML += `
@@ -1454,13 +1548,25 @@
                     </div>`;
             }
         }
+
         if (game.input2_enabled) {
             hasInput = true;
-            dynInputs.innerHTML += `
-                <div class="input-group">
-                    <label>${game.input2_label || "Server ID"}</label>
-                    <input type="text" id="custInput2" placeholder="${game.input2_placeholder || ""}">
-                </div>`;
+            if (gType === "mlbb") {
+                dynInputs.innerHTML += `
+                    <div class="input-group">
+                        <label>${game.input2_label || "Server / Zone ID"}</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="custInput2" placeholder="${game.input2_placeholder || "បញ្ចូល Server ID..."}" oninput="onGameIdTyping()">
+                            <button type="button" class="roblox-check-btn" onclick="lookupGameNickname(false)">🔍 ឆែកឈ្មោះ</button>
+                        </div>
+                    </div>`;
+            } else {
+                dynInputs.innerHTML += `
+                    <div class="input-group">
+                        <label>${game.input2_label || "Server ID"}</label>
+                        <input type="text" id="custInput2" placeholder="${game.input2_placeholder || ""}">
+                    </div>`;
+            }
         }
 
         const noteEl = document.getElementById("gameInputNote");
@@ -2233,6 +2339,9 @@
             const v2 = document.getElementById("custInput2").value.trim();
             if (!v2) { errEl.innerText = `⚠️ សូមបញ្ចូល ${selectedGame.input2_label}!`; return; }
             pInfo.push(`(${v2})`);
+        }
+        if (verifiedGameNickname) {
+            pInfo.push(`[${verifiedGameNickname}]`);
         }
 
         errEl.innerText = "";
