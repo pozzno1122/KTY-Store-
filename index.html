@@ -1,615 +1,2264 @@
-from flask import Flask, request, jsonify, send_file, Response
-from flask_cors import CORS
-from bakong_khqr import KHQR
-import requests
-import hashlib
-import hmac
-import time
-import uuid
-import json
-import os
-
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-# ការកំណត់ Bakong & Telegram Bot
-BAKONG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYzYxMWEyYTY2YzUxNDNlNSJ9LCJpYXQiOjE3ODkzMTA4MzMsImV4cCI6MTc5NzA4NjgzM30.TId975LLnYAV3D4BUuJJWxuRU_A4dyyVW28lxNEwwYs"
-BAKONG_ID = "topup_kty@bkrt"
-
-TG_BOT_TOKEN = "8681603461:AAHTBdVpAVAMxaDF7pZfiSwn9SPrN6w7kqM"
-TG_GROUP_ID = "-1005852775918"
-ADMIN_USERNAME = "ktyofficial169"
-
-khqr = KHQR(BAKONG_TOKEN)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(BASE_DIR, 'store_data.json')
-
-DEFAULT_DATA = {
-    "banners": [
-        "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1280&q=80"
-    ],
-    "games": [
-        {
-            "id": "game_1",
-            "name": "Roblox",
-            "image": "https://cdn-icons-png.flaticon.com/512/686/686589.png",
-            "input1_enabled": True,
-            "input1_label": "Roblox Username",
-            "input1_placeholder": "បញ្ចូលឈ្មោះគណនី Roblox...",
-            "input2_enabled": False,
-            "input2_label": "",
-            "input2_placeholder": "",
-            "input_note": "⚠️ សូមពិនិត្យ Username ឱ្យបានត្រឹមត្រូវ មុននឹងធ្វើការទូទាត់ប្រាក់។"
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KTY TOPUP STORE - ហាងបញ្ចូលកញ្ចប់ហ្គេម និងលក់គណនី</title>
+    <link rel="icon" type="image/png" href="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: sans-serif;
+            background: #090d16;
+            color: #f8fafc;
+            padding-bottom: 95px;
         }
-    ],
-    "items": [
-        {
-            "id": "item_1",
-            "game_id": "game_1",
-            "name": "80 Robux",
-            "price": 1.00,
-            "image": "https://cdn-icons-png.flaticon.com/512/616/616490.png"
+        /* Navbar */
+        .navbar {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #1f2937;
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
-    ],
-    "accounts": [],
-    "users": {},
-    "orders": [],
-    "chats": {}
-}
-
-# ==================== ប្រព័ន្ធរក្សាទុកទិន្នន័យលើ Telegram Cloud ====================
-def sync_from_telegram():
-    try:
-        res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=8).json()
-        if res.get("ok"):
-            pinned = res["result"].get("pinned_message")
-            if pinned and pinned.get("document"):
-                file_id = pinned["document"]["file_id"]
-                f_res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getFile?file_id={file_id}", timeout=8).json()
-                if f_res.get("ok"):
-                    file_path = f_res["result"]["file_path"]
-                    raw = requests.get(f"https://api.telegram.org/file/bot{TG_BOT_TOKEN}/{file_path}", timeout=10).json()
-                    if isinstance(raw, dict) and "games" in raw:
-                        raw.setdefault("accounts", [])
-                        raw.setdefault("users", {})
-                        raw.setdefault("orders", [])
-                        raw.setdefault("chats", {})
-                        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-                            json.dump(raw, f, ensure_ascii=False, indent=2)
-                        return raw
-    except Exception as e:
-        print("Sync from Telegram failed:", e)
-    return None
-
-def backup_to_telegram(data):
-    try:
-        json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
-        files = {'document': ('kty_store_db.json', json_bytes, 'application/json')}
-        payload = {
-            'chat_id': TG_GROUP_ID,
-            'caption': '🗄️ KTY STORE DATABASE (កុំលុបសារនេះ)',
-            'disable_notification': True
+        .nav-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        res = requests.post(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendDocument", files=files, data=payload, timeout=15).json()
-        if res.get("ok"):
-            msg_id = res["result"]["message_id"]
-            requests.post(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/pinChatMessage", json={
-                'chat_id': TG_GROUP_ID,
-                'message_id': msg_id,
-                'disable_notification': True
-            }, timeout=5)
-    except Exception as e:
-        print("Backup to Telegram failed:", e)
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-                d.setdefault("accounts", [])
-                d.setdefault("users", {})
-                d.setdefault("orders", [])
-                d.setdefault("chats", {})
-                return d
-        except:
-            pass
-    cloud_data = sync_from_telegram()
-    if cloud_data:
-        return cloud_data
-    save_data(DEFAULT_DATA, sync_cloud=False)
-    return DEFAULT_DATA
-
-def save_data(data, sync_cloud=True):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    if sync_cloud:
-        backup_to_telegram(data)
-
-sync_from_telegram()
-
-def send_telegram_group(text):
-    try:
-        url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
-        requests.post(url, json={
-            "chat_id": TG_GROUP_ID,
-            "text": text,
-            "parse_mode": "HTML"
-        }, timeout=5)
-    except Exception as e:
-        print("Telegram Error:", e)
-
-def verify_telegram_auth(auth_data):
-    check_hash = auth_data.get('hash')
-    if not check_hash:
-        return False
-    data_check_arr = []
-    for key, value in sorted(auth_data.items()):
-        if key != 'hash' and value is not None:
-            data_check_arr.append(f"{key}={value}")
-    data_check_string = "\n".join(data_check_arr)
-    secret_key = hashlib.sha256(TG_BOT_TOKEN.encode()).digest()
-    calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-    return calculated_hash == check_hash
-
-@app.route('/')
-def home():
-    return send_file(os.path.join(BASE_DIR, 'index.html'))
-
-@app.route('/api/store', methods=['GET'])
-def get_store():
-    d = load_data()
-    safe_accounts = []
-    for acc in d.get("accounts", []):
-        safe_accounts.append({
-            "id": acc["id"],
-            "title": acc["title"],
-            "game_name": acc["game_name"],
-            "price": acc["price"],
-            "stock": acc["stock"],
-            "description": acc.get("description", ""),
-            "images": acc.get("images", [])
-        })
-    return jsonify({
-        "banners": d["banners"],
-        "games": d["games"],
-        "items": d["items"],
-        "accounts": safe_accounts
-    })
-
-@app.route('/api/upload-tg-image', methods=['POST'])
-def upload_tg_image():
-    if 'photo' not in request.files:
-        return jsonify({"success": False, "error": "មិនមានរូបភាពទេ!"}), 400
-    photo_file = request.files['photo']
-    try:
-        url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendPhoto"
-        files = {'photo': (photo_file.filename, photo_file.stream, photo_file.mimetype)}
-        data = {
-            'chat_id': TG_GROUP_ID,
-            'caption': '🖼️ រូបភាពស្តុកគណនីហ្គេម (Telegram Cloud Storage)',
-            'disable_notification': True
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 19px;
+            color: #38bdf8;
+            cursor: pointer;
         }
-        res = requests.post(url, files=files, data=data, timeout=20).json()
-        if res.get("ok"):
-            file_id = res["result"]["photo"][-1]["file_id"]
-            return jsonify({"success": True, "file_id": file_id})
-        else:
-            return jsonify({"success": False, "error": res.get("description", "Upload Failed")}), 500
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        .brand img {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #1e293b;
+            border: 1px solid #334155;
+        }
+        .tg-btn {
+            background: #54a9eb;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tg-btn img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
 
-@app.route('/api/tg-image/<file_id>', methods=['GET'])
-def serve_tg_image(file_id):
-    try:
-        info_res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getFile?file_id={file_id}", timeout=10).json()
-        if not info_res.get("ok"):
-            return "File not found", 404
-        file_path = info_res["result"]["file_path"]
-        file_url = f"https://api.telegram.org/file/bot{TG_BOT_TOKEN}/{file_path}"
-        img_res = requests.get(file_url, timeout=15)
-        return Response(img_res.content, mimetype=img_res.headers.get('Content-Type', 'application/octet-stream'))
-    except Exception as e:
-        return str(e), 500
+        /* Responsive Container */
+        .container { max-width: 1120px; margin: 0 auto; padding: 18px 16px; }
 
-# ==================== ប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Text Only - លឿន និងស្រាល) ====================
-@app.route('/api/chat/send', methods=['POST'])
-def chat_send():
-    payload = request.get_json(silent=True) or {}
-    room_id = str(payload.get("room_id", "")).strip()
-    sender_id = str(payload.get("sender_id", "")).strip()
-    sender_name = str(payload.get("sender_name", "User")).strip()
-    sender_username = str(payload.get("sender_username", "")).strip()
-    sender_photo = str(payload.get("sender_photo", "")).strip()
-    is_admin = bool(payload.get("is_admin", False))
-    text = str(payload.get("text", "")).strip()
-
-    if not room_id or not sender_id or not text:
-        return jsonify({"success": False, "error": "សូមបញ្ចូលសារជាអក្សរ!"}), 400
-
-    d = load_data()
-    chats = d.setdefault("chats", {})
-    users = d.get("users", {})
-    target_user = users.get(room_id, {})
-
-    if room_id not in chats:
-        chats[room_id] = {
-            "user_id": room_id,
-            "user_name": target_user.get("first_name", sender_name if not is_admin else "Customer"),
-            "user_username": target_user.get("username", sender_username if not is_admin else ""),
-            "user_photo": target_user.get("photo_url", sender_photo if not is_admin else ""),
-            "unread_admin": 0,
-            "unread_user": 0,
-            "updated_ts": time.time(),
-            "messages": []
+        .page-view { animation: fadeIn 0.25s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-    room = chats[room_id]
-    if not is_admin:
-        room["user_name"] = sender_name
-        room["user_username"] = sender_username
-        if sender_photo:
-            room["user_photo"] = sender_photo
-        room["unread_admin"] = room.get("unread_admin", 0) + 1
-    else:
-        room["unread_user"] = room.get("unread_user", 0) + 1
+        /* Banner 16:9 */
+        .banner-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto 24px;
+            aspect-ratio: 16 / 9;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #1e293b;
+            border: 1px solid #334155;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+        }
+        .banner-slide { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .banner-slide.active { display: block; }
+        .banner-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; }
+        .dot.active { background: #38bdf8; width: 20px; border-radius: 4px; }
 
-    room["updated_ts"] = time.time()
+        .sec-title {
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 14px;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .step-num {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+        }
 
-    msg_obj = {
-        "id": f"m_{int(time.time()*1000)}",
-        "sender_id": sender_id,
-        "sender_name": sender_name,
-        "sender_photo": sender_photo,
-        "is_admin": is_admin,
-        "text": text,
-        "time": time.strftime("%H:%M")
+        /* Games Grid */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        @media (min-width: 768px) {
+            .games-grid { grid-template-columns: repeat(6, 1fr); gap: 16px; }
+        }
+        .game-card {
+            background: #131b2e;
+            border: 1px solid #26334d;
+            border-radius: 16px;
+            padding: 16px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.2s;
+        }
+        .game-card:hover { border-color: #38bdf8; transform: translateY(-2px); }
+        .game-card img {
+            width: 76px;
+            height: 76px;
+            border-radius: 16px;
+            object-fit: cover;
+            margin-bottom: 8px;
+            background: #0f172a;
+        }
+        .game-name { font-size: 13px; font-weight: bold; color: #f1f5f9; }
+
+        /* Accounts Grid */
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        @media (min-width: 768px) {
+            .accounts-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        }
+        .acc-card {
+            background: #131b2e;
+            border: 1px solid #26334d;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.15s, border-color 0.2s;
+        }
+        .acc-card:hover { border-color: #fbbf24; transform: translateY(-2px); }
+        .acc-thumb-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            background: #090d16;
+        }
+        .acc-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .acc-game-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #38bdf8;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+        .acc-photo-count {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+        .acc-body { padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .acc-title { font-size: 13px; font-weight: bold; color: #f8fafc; margin-bottom: 6px; line-height: 1.3; }
+        .acc-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+        .acc-price { font-size: 15px; font-weight: 800; color: #fbbf24; }
+        .acc-stock { font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: bold; }
+        .stock-in { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .stock-out { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        /* Detail Layout */
+        .detail-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        @media (min-width: 820px) {
+            .detail-layout { grid-template-columns: 360px 1fr; align-items: start; }
+        }
+
+        .acc-gallery {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 10px;
+            border-radius: 16px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+        }
+        .acc-gallery img {
+            width: 100%;
+            max-height: 280px;
+            flex-shrink: 0;
+            scroll-snap-align: center;
+            border-radius: 14px;
+            object-fit: cover;
+            border: 1px solid #334155;
+            background: #090d16;
+        }
+
+        .back-bar { display: flex; align-items: center; margin-bottom: 14px; }
+        .btn-back {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .game-hero {
+            background: linear-gradient(135deg, #162238, #0f172a);
+            border: 1px solid #2d3f5e;
+            border-radius: 18px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .game-hero img { width: 76px; height: 76px; border-radius: 16px; object-fit: cover; border: 2px solid #38bdf8; }
+        .game-hero-info h2 { font-size: 20px; color: #fff; margin-bottom: 6px; }
+        .game-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+        .badge-tag { background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 11px; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+
+        .box {
+            background: #131b2e;
+            border: 1px solid #26334d;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 6px; font-weight: bold; }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+            background: #090d16;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus { border-color: #38bdf8; }
+        .note-text { font-size: 12px; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 10px; margin-top: 8px; line-height: 1.4; }
+
+        .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (min-width: 768px) {
+            .items-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        }
+        .item-card {
+            background: #090d16;
+            border: 2px solid #1e293b;
+            border-radius: 14px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .item-card.active { border-color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+        .item-card img { width: 42px; height: 42px; border-radius: 8px; object-fit: contain; }
+        .item-name { font-size: 13px; font-weight: bold; color: #fff; }
+        .item-price { font-size: 15px; font-weight: bold; color: #fbbf24; margin-top: 3px; }
+
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-buy { background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; }
+        .btn-buy:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+        .btn-admin { background: #f59e0b; color: #000; padding: 8px 12px; font-size: 13px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-edit { background: #0284c7; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
+        .btn-danger { background: #ef4444; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
+        .btn-cancel { background: #475569; color: #fff; padding: 10px; font-size: 13px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+
+        /* Admin Panel */
+        #adminPanel {
+            display: none;
+            background: #172033;
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 24px;
+            max-width: 760px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .admin-tabs { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; }
+        .tab-btn { flex: 1; min-width: 65px; padding: 8px 4px; background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .tab-btn.active { background: #f59e0b; color: #000; border-color: #f59e0b; }
+        .admin-sec { display: none; }
+        .admin-sec.active { display: block; }
+        .list-row { display: flex; justify-content: space-between; align-items: center; background: #090d16; padding: 8px 10px; border-radius: 8px; margin-top: 8px; font-size: 13px; gap: 8px; }
+        .row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .switch-row { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+
+        .preview-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
+        .preview-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid #38bdf8; }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-del { position: absolute; top: 2px; right: 2px; background: #ef4444; color: #fff; border: none; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; cursor: pointer; }
+
+        /* ==================== ប៊ូតុងឆាតនៅជ្រុងខាងក្រោមឆ្វេងដៃ ==================== */
+        .floating-chat-btn {
+            position: fixed;
+            bottom: 18px;
+            left: 18px;
+            z-index: 90;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #fff;
+            border: 2px solid #38bdf8;
+            padding: 12px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.55);
+            transition: transform 0.15s;
+        }
+        .floating-chat-btn:active { transform: scale(0.95); }
+        .chat-badge {
+            background: #ef4444;
+            color: #fff;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        /* ផ្ទាំងឆាត (Chat Window Modal - Text Only) */
+        .chat-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            z-index: 120;
+            justify-content: center;
+            align-items: flex-end;
+            padding: 10px;
+        }
+        @media (min-width: 640px) {
+            .chat-modal {
+                align-items: flex-end;
+                justify-content: flex-start;
+                padding: 20px;
+            }
+        }
+        .chat-window {
+            background: #131b2e;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 420px;
+            height: 78vh;
+            max-height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.65);
+        }
+        .chat-header {
+            background: #1e293b;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+        .chat-header-info { display: flex; align-items: center; gap: 10px; }
+        .chat-header-info img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #38bdf8; }
+
+        /* ក្រឡោន ២ សម្រាប់ Admin៖ អតិថិជនឆាតមកថ្មីៗ & អតិថិជនទាំងអស់ */
+        .chat-admin-tabs {
+            display: flex;
+            background: #0f172a;
+            padding: 6px;
+            gap: 6px;
+            border-bottom: 1px solid #334155;
+        }
+        .chat-tab-btn {
+            flex: 1;
+            padding: 8px 6px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .chat-tab-btn.active {
+            background: #0284c7;
+            color: #fff;
+        }
+
+        .chat-rooms-list { flex: 1; overflow-y: auto; padding: 12px; }
+        .chat-room-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #090d16;
+            padding: 10px 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid #1e293b;
+            transition: 0.15s;
+        }
+        .chat-room-item:hover { border-color: #38bdf8; background: #0f172a; }
+        .chat-messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #090d16;
+        }
+        .msg-row { display: flex; gap: 8px; max-width: 82%; align-items: flex-end; }
+        .msg-row.mine { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #1e293b; }
+        .msg-bubble {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 9px 13px;
+            border-radius: 14px;
+            font-size: 13px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .msg-row.mine .msg-bubble { background: #0284c7; color: #fff; }
+        .msg-sender { font-size: 10px; color: #94a3b8; margin-bottom: 2px; font-weight: bold; }
+        .msg-time { font-size: 9px; opacity: 0.7; margin-top: 4px; text-align: right; }
+
+        .chat-input-bar {
+            background: #1e293b;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-top: 1px solid #334155;
+        }
+        .chat-text-input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 20px;
+            border: 1px solid #334155;
+            background: #090d16;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+        .chat-send-btn {
+            background: #10b981;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* Credential & Modals */
+        .cred-box { background: #090d16; border: 2px solid #10b981; border-radius: 12px; padding: 12px; margin: 12px 0; text-align: left; }
+        .cred-field { background: #131b2e; padding: 8px 10px; border-radius: 8px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .copy-btn { background: #0284c7; color: #fff; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: bold; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); justify-content: center; align-items: center; padding: 16px; z-index: 100; }
+        .modal-box { background: #1e293b; border-radius: 20px; padding: 22px; max-width: 400px; width: 100%; text-align: center; max-height: 88vh; overflow-y: auto; border: 1px solid #334155; }
+        .history-item { background: #090d16; padding: 12px; border-radius: 12px; margin-bottom: 10px; text-align: left; font-size: 12px; border-left: 4px solid #38bdf8; }
+
+        .scanning-indicator { display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-top: 10px; }
+        .pulse-dot { width: 10px; height: 10px; background: #38bdf8; border-radius: 50%; animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.4; } 100% { transform: scale(0.9); opacity: 1; } }
+
+        .check-circle { width: 68px; height: 68px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 34px; color: #fff; }
+        .receipt-box { background: #0f172a; border: 1px dashed #334155; border-radius: 12px; padding: 12px; margin: 12px 0; text-align: left; font-size: 12px; }
+        .receipt-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.4); }
+        .receipt-row:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <div class="nav-inner">
+        <div class="brand" onclick="goHomePage()">
+            <img src="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png" alt="KTY Logo">
+            <span>KTY STORE</span>
+        </div>
+        <div id="authArea">
+            <button class="tg-btn" onclick="openLoginModal()">✈️ ចុះឈ្មោះតាម Telegram</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== ប៊ូតុង "ឆាត" នៅខាងក្រោមឆ្វេងដៃ ==================== -->
+<button class="floating-chat-btn" onclick="openChatModal()">
+    <span>💬 ឆាត</span>
+    <span id="chatUnreadBadge" class="chat-badge">0</span>
+</button>
+
+<div class="container">
+    <!-- ==================== ទំព័រទី ១៖ ទំព័រដើម (HOME PAGE) ==================== -->
+    <div id="homePageView" class="page-view">
+        <div id="adminPanel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <span style="color:#fbbf24; font-weight:bold;">👑 ផ្ទាំងគ្រប់គ្រង Admin (@ktyofficial169)</span>
+            </div>
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="switchAdminTab('tabBanner', this)">🖼️ Banner</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabGame', this)">🎮 ហ្គេម</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabItem', this)">💎 Item</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabAcc', this); loadAdminAccounts();">🔐 លក់គណនី</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabOrders', this); loadAdminOrders();">📜 ប្រវត្តិ</button>
+            </div>
+
+            <div id="tabBanner" class="admin-sec active">
+                <div class="input-group">
+                    <label id="bannerFormLabel">ដាក់ Link រូបភាព Banner (ទំហំ 16:9)</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="newBannerUrl" placeholder="https://example.com/banner.jpg">
+                        <button class="btn-admin" id="bannerSaveBtn" onclick="saveBanner()">បន្ថែម</button>
+                        <button class="btn-cancel" id="bannerCancelBtn" style="display:none; padding:8px 10px;" onclick="cancelEditBanner()">បោះបង់</button>
+                    </div>
+                </div>
+                <div id="adminBannerList"></div>
+            </div>
+
+            <div id="tabGame" class="admin-sec">
+                <div id="gameEditBanner" style="display:none; background:rgba(2,132,199,0.2); border:1px solid #38bdf8; color:#38bdf8; padding:8px 10px; border-radius:8px; font-size:12px; margin-bottom:10px; font-weight:bold;">
+                    ✏️ កំពុងកែសម្រួលព័ត៌មានហ្គេម...
+                </div>
+                <div class="input-group">
+                    <label>ឈ្មោះហ្គេម (ឧ. MLBB KH, Free Fire, Roblox)</label>
+                    <input type="text" id="newGameName" placeholder="បញ្ចូលឈ្មោះហ្គេម...">
+                </div>
+                <div class="input-group">
+                    <label>Link រូបភាព Logo ហ្គេម</label>
+                    <input type="text" id="newGameImg" placeholder="https://...">
+                </div>
+                <div class="switch-row">
+                    <span>បើកប្រអប់សរសេរទី ១ (ឧ. User ID / Username)</span>
+                    <input type="checkbox" id="in1Enabled" checked onchange="toggleInputConfig()">
+                </div>
+                <div id="in1Config" class="input-group">
+                    <input type="text" id="in1Label" placeholder="ចំណងជើងប្រអប់ទី ១" style="margin-bottom:6px;">
+                    <input type="text" id="in1Placeholder" placeholder="អក្សរគំរូក្នុងប្រអប់ទី ១...">
+                </div>
+                <div class="switch-row">
+                    <span>បើកប្រអប់សរសេរទី ២ (ឧ. Server ID / Zone ID)</span>
+                    <input type="checkbox" id="in2Enabled" onchange="toggleInputConfig()">
+                </div>
+                <div id="in2Config" class="input-group" style="display:none;">
+                    <input type="text" id="in2Label" placeholder="ចំណងជើងប្រអប់ទី ២" style="margin-bottom:6px;">
+                    <input type="text" id="in2Placeholder" placeholder="អក្សរគំរូក្នុងប្រអប់ទី ២...">
+                </div>
+                <div class="input-group">
+                    <label>អក្សរណែនាំខាងក្រោមប្រអប់បំពេញព័ត៌មាន</label>
+                    <textarea id="inNote" rows="2" placeholder="សរសេរព័ត៌មានណែនាំអតិថិជន..."></textarea>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-admin" id="gameSaveBtn" style="flex:1; padding:10px;" onclick="saveGame()">+ បង្ហោះហ្គេមថ្មី</button>
+                    <button class="btn-cancel" id="gameCancelBtn" style="display:none;" onclick="cancelEditGame()">បោះបង់</button>
+                </div>
+                <div id="adminGameList" style="margin-top:12px;"></div>
+            </div>
+
+            <div id="tabItem" class="admin-sec">
+                <div id="itemEditBanner" style="display:none; background:rgba(2,132,199,0.2); border:1px solid #38bdf8; color:#38bdf8; padding:8px 10px; border-radius:8px; font-size:12px; margin-bottom:10px; font-weight:bold;">
+                    ✏️ កំពុងកែសម្រួលកញ្ចប់ Item...
+                </div>
+                <div class="input-group">
+                    <label>ជ្រើសរើសហ្គេមសម្រាប់ដាក់ Item នេះ</label>
+                    <select id="itemGameSelect"></select>
+                </div>
+                <div class="input-group">
+                    <label>ឈ្មោះកញ្ចប់ Item</label>
+                    <input type="text" id="newItemName" placeholder="ឧទាហរណ៍៖ 80 Robux">
+                </div>
+                <div class="input-group">
+                    <label>តម្លៃ ($ USD)</label>
+                    <input type="number" step="0.01" id="newItemPrice" placeholder="ឧទាហរណ៍៖ 1.00">
+                </div>
+                <div class="input-group">
+                    <label>Link រូបភាព Item</label>
+                    <input type="text" id="newItemImg" placeholder="https://...">
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-admin" id="itemSaveBtn" style="flex:1; padding:10px;" onclick="saveItem()">+ បង្ហោះកញ្ចប់ Item</button>
+                    <button class="btn-cancel" id="itemCancelBtn" style="display:none;" onclick="cancelEditItem()">បោះបង់</button>
+                </div>
+                <div id="adminItemList" style="margin-top:12px;"></div>
+            </div>
+
+            <div id="tabAcc" class="admin-sec">
+                <div id="accEditBanner" style="display:none; background:rgba(2,132,199,0.2); border:1px solid #38bdf8; color:#38bdf8; padding:8px 10px; border-radius:8px; font-size:12px; margin-bottom:10px; font-weight:bold;">
+                    ✏️ កំពុងកែសម្រួលគណនីហ្គេម...
+                </div>
+                <div class="input-group">
+                    <label>ជ្រើសរើសប្រភេទហ្គេម (ឧ. Roblox, MLBB, Free Fire)</label>
+                    <input type="text" id="accGameName" list="gameSuggestions" placeholder="វាយឈ្មោះហ្គេម ឬជ្រើសរើស...">
+                    <datalist id="gameSuggestions">
+                        <option value="Roblox">
+                        <option value="MLBB">
+                        <option value="Free Fire">
+                        <option value="PUBG Mobile">
+                    </datalist>
+                </div>
+                <div class="input-group">
+                    <label>ឈ្មោះគណនី / ចំណងជើងលក់</label>
+                    <input type="text" id="accTitle" placeholder="ឧទាហរណ៍៖ គណនី Blox Fruits Max Level + Kitsune">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div class="input-group">
+                        <label>តម្លៃ ($ USD)</label>
+                        <input type="number" step="0.01" id="accPrice" placeholder="ឧ. 5.00">
+                    </div>
+                    <div class="input-group">
+                        <label>ចំនួនស្តុក</label>
+                        <input type="number" id="accStock" value="1" min="0">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>ព័ត៌មានលម្អិតអំពីគណនី</label>
+                    <textarea id="accDesc" rows="2" placeholder="រៀបរាប់ពី Skin, Level, ឬចំណុចពិសេសនៃគណនី..."></textarea>
+                </div>
+
+                <div style="background:#0f172a; border:1px dashed #10b981; padding:10px; border-radius:10px; margin-bottom:12px;">
+                    <div style="font-size:12px; color:#10b981; font-weight:bold; margin-bottom:8px;">🔒 ព័ត៌មានគណនីសម្រាប់ប្រគល់ជូនភ្ញៀវភ្លាមៗពេលបង់ប្រាក់រួច៖</div>
+                    <div class="input-group" style="margin-bottom:8px;">
+                        <label>Gmail ឬ Username គណនីហ្គេម</label>
+                        <input type="text" id="accLogin" placeholder="បញ្ចូល Gmail ឬ Username...">
+                    </div>
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label>ពាក្យសម្ងាត់ (Password)</label>
+                        <input type="text" id="accPassword" placeholder="បញ្ចូល Password គណនី...">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Upload រូបភាពគណនី (អតិបរមា ១០ រូប - ផ្ទុកលើ Telegram)</label>
+                    <input type="file" id="accPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this)" style="background:#090d16; padding:8px; border-radius:8px; width:100%; color:#cbd5e1;">
+                    <div id="uploadProgressText" style="font-size:12px; color:#38bdf8; margin-top:4px;"></div>
+                    <div class="preview-grid" id="accPhotoPreview"></div>
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-admin" id="accSaveBtn" style="flex:1; padding:10px;" onclick="saveAccountPost()">+ បង្ហោះលក់គណនី</button>
+                    <button class="btn-cancel" id="accCancelBtn" style="display:none;" onclick="cancelEditAccount()">បោះបង់</button>
+                </div>
+                <div id="adminAccList" style="margin-top:12px;"></div>
+            </div>
+
+            <div id="tabOrders" class="admin-sec">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-size:13px; color:#cbd5e1; font-weight:bold;">បញ្ជីការបញ្ជាទិញទាំងអស់</span>
+                    <button class="btn-admin" onclick="loadAdminOrders()">🔄 ផ្ទុកឡើងវិញ</button>
+                </div>
+                <div id="adminAllOrdersList" style="max-height:320px; overflow-y:auto;"></div>
+            </div>
+        </div>
+
+        <div class="banner-wrapper" id="bannerSlider">
+            <div class="banner-dots" id="bannerDots"></div>
+        </div>
+
+        <div class="sec-title">🎮 ជ្រើសរើសហ្គេម (Top-up Item)</div>
+        <div class="games-grid" id="gamesGrid"></div>
+
+        <div id="accountsHomeSection" style="display:none;">
+            <div class="sec-title">🔐 គណនីហ្គេមដាក់លក់ (ទិញភ្លាមបានលេងភ្លាម)</div>
+            <div class="accounts-grid" id="accountsGrid"></div>
+        </div>
+    </div>
+
+    <!-- ==================== ទំព័រទី ២៖ ទំព័រទិញកញ្ចប់ Item ហ្គេម ==================== -->
+    <div id="gameDetailView" class="page-view" style="display:none;">
+        <div class="back-bar">
+            <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
+        </div>
+
+        <div class="detail-layout">
+            <div>
+                <div class="game-hero">
+                    <img id="heroGameImg" src="" alt="Game Logo">
+                    <div class="game-hero-info">
+                        <h2 id="heroGameName">Game Name</h2>
+                        <div class="game-badges">
+                            <span class="badge-tag">⚡ បញ្ចូលរហ័ស</span>
+                            <span class="badge-tag">🇰🇭 គាំទ្រ KHQR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="box" id="playerInputBox">
+                    <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
+                    <div id="dynamicInputs"></div>
+                    <div class="note-text" id="gameInputNote"></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="box">
+                    <div class="sec-title"><span class="step-num">2</span> ជ្រើសរើសកញ្ចប់ Item</div>
+                    <div class="items-grid" id="itemsGrid"></div>
+                </div>
+
+                <div class="box">
+                    <div class="sec-title"><span class="step-num">3</span> ផ្ទៀងផ្ទាត់ និងទូទាត់ប្រាក់</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:10px; background:#090d16; border-radius:10px;">
+                        <span style="color:#94a3b8; font-size:14px;">ត្រូវទូទាត់សរុប៖</span>
+                        <span id="checkoutSummary" style="font-weight:bold; font-size:16px; color:#fbbf24;">$0.00</span>
+                    </div>
+                    <button class="btn btn-buy" id="payBtn" onclick="createItemOrder()">ទូទាត់ប្រាក់តាម KHQR</button>
+                    <div id="orderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ទំព័រទី ៣៖ ទំព័រព័ត៌មានគណនីហ្គេម ==================== -->
+    <div id="accountDetailView" class="page-view" style="display:none;">
+        <div class="back-bar">
+            <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
+        </div>
+
+        <div class="detail-layout">
+            <div>
+                <div class="acc-gallery" id="accDetailGallery"></div>
+                <div style="text-align:center; font-size:11px; color:#94a3b8; margin-bottom:12px;">👈 អូសឆ្វេង-ស្តាំ ដើម្បីមើលរូបភាពទាំងអស់ 👉</div>
+            </div>
+
+            <div class="box">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span id="accDetailGame" class="badge-tag">GAME</span>
+                    <span id="accDetailStock" class="acc-stock stock-in">នៅសល់: 1</span>
+                </div>
+                <h2 id="accDetailTitle" style="font-size:19px; color:#fff; margin-bottom:8px;">Account Title</h2>
+                <div id="accDetailPrice" style="font-size:22px; font-weight:800; color:#fbbf24; margin-bottom:12px;">$0.00</div>
+                
+                <div style="font-size:13px; color:#cbd5e1; font-weight:bold; margin-bottom:4px;">📋 ព័ត៌មានលម្អិត៖</div>
+                <div id="accDetailDesc" class="note-text" style="margin-top:0; margin-bottom:16px; white-space:pre-line;"></div>
+
+                <button class="btn btn-buy" id="buyAccBtn" onclick="createAccountOrder()">ទិញគណនីនេះឥឡូវនេះ (KHQR)</button>
+                <div id="accOrderError" style="color:#f43f5e; font-size:13px; margin-top:10px; text-align:center;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== ផ្ទាំងឆាតឯកជនក្នុងវេបសាយ (TEXT ONLY) ==================== -->
+<div class="chat-modal" id="chatModal">
+    <div class="chat-window">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <button id="chatBackToRoomsBtn" onclick="showAdminChatDirectory()" style="display:none; background:none; border:none; color:#38bdf8; font-size:18px; cursor:pointer; margin-right:4px;">←</button>
+                <img id="chatHeaderAvatar" src="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png">
+                <div>
+                    <div id="chatHeaderTitle" style="font-weight:bold; font-size:14px; color:#fff;">KTY STORE (ម្ចាស់ហាង)</div>
+                    <div id="chatHeaderSub" style="font-size:11px; color:#10b981;">● ឆាតឯកជនក្នុងវេបសាយ</div>
+                </div>
+            </div>
+            <button onclick="closeChatModal()" style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
+        </div>
+
+        <!-- ផ្ទាំងបញ្ជីអតិថិជនសម្រាប់តែ Admin (មានក្រឡោន ២) -->
+        <div id="adminChatDirectoryView" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+            <div class="chat-admin-tabs">
+                <button class="chat-tab-btn active" id="tabRecentChatsBtn" onclick="switchAdminChatTab('recent')">💬 អតិថិជនឆាតមកថ្មីៗ</button>
+                <button class="chat-tab-btn" id="tabAllUsersBtn" onclick="switchAdminChatTab('all')">👥 អតិថិជនទាំងអស់</button>
+            </div>
+            <div id="adminChatSearchBox" style="display:none; padding:8px 12px 0;">
+                <input type="text" id="adminUserSearchInput" placeholder="🔍 ស្វែងរកឈ្មោះ ឬ @username..." oninput="renderAdminChatDirectory()" style="padding:8px 12px; font-size:12px;">
+            </div>
+            <div id="adminChatRoomsList" class="chat-rooms-list"></div>
+        </div>
+
+        <!-- ផ្ទាំងសន្ទនា (សារជាអក្សរសុទ្ធ) -->
+        <div id="chatConversationView" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+            <div id="chatMessagesArea" class="chat-messages-area"></div>
+            <div class="chat-input-bar">
+                <input type="text" id="chatTextInput" class="chat-text-input" placeholder="សរសេរសារនៅទីនេះ..." onkeypress="if(event.key==='Enter') sendChatText()">
+                <button class="chat-send-btn" onclick="sendChatText()">ផ្ញើ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ចុះឈ្មោះតាម Telegram -->
+<div class="modal" id="loginModal">
+    <div class="modal-box">
+        <h3 style="margin-bottom:8px;">✈️ ចុះឈ្មោះតាមគណនី Telegram</h3>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">ចុះឈ្មោះដើម្បីរក្សាទុកព័ត៌មានគណនីហ្គេមដែលអ្នកបានទិញ និងជជែកជាមួយម្ចាស់ហាង</p>
+        <div id="tgWidgetContainer" style="min-height:48px; display:flex; justify-content:center; align-items:center; margin-bottom:10px;"></div>
+        <div id="loginError" style="color:#f43f5e; font-size:12px; margin-top:8px;"></div>
+        <button style="background:none; border:none; color:#94a3b8; margin-top:12px; cursor:pointer;" onclick="closeModal('loginModal')">បិទ</button>
+    </div>
+</div>
+
+<!-- Modal ប្រវត្តិការទិញរបស់អតិថិជន -->
+<div class="modal" id="profileModal">
+    <div class="modal-box">
+        <h3 id="profileTitle" style="margin-bottom:4px;">គណនីរបស់ខ្ញុំ</h3>
+        <div id="profileSub" style="font-size:12px; color:#94a3b8; margin-bottom:14px;"></div>
+        <div style="text-align:left; font-weight:bold; font-size:14px; margin-bottom:8px; color:#38bdf8;">📜 ប្រវត្តិការទិញ & គណនីហ្គេមរបស់អ្នក៖</div>
+        <div id="orderHistoryList" style="max-height:310px; overflow-y:auto; margin-bottom:14px;"></div>
+        <button class="btn-danger" style="width:100%; padding:10px; font-size:14px;" onclick="logoutTelegram()">ចាកចេញពីគណនី</button>
+        <button style="background:none; border:none; color:#94a3b8; margin-top:12px; cursor:pointer;" onclick="closeModal('profileModal')">បិទ</button>
+    </div>
+</div>
+
+<!-- Modal បង្ហាញ One-Time KHQR និង ទំព័រទទួលព័ត៌មានគណនីភ្លាមៗ -->
+<div class="modal" id="qrModal">
+    <div class="modal-box">
+        <div id="qrView">
+            <div style="font-weight:bold; font-size:16px;">ស្កេនដើម្បីបង់ប្រាក់ (ប្រើបានតែ ១ ដង)</div>
+            <div id="qrOrderDesc" style="font-size:12px; color:#94a3b8; margin:4px 0 12px;"></div>
+            <div style="background:#fff; color:#000; border-radius:12px; overflow:hidden; margin-bottom:10px;">
+                <div style="background:#e11d48; color:#fff; padding:8px; font-weight:bold;">KHQR (ONE-TIME)</div>
+                <div style="padding-top:8px; font-weight:bold; font-size:14px;">KTY TOPUP STORE</div>
+                <div id="qrAmountText" style="font-size:22px; font-weight:bold; color:#e11d48;">$0.00</div>
+                <div id="qrImgHolder" style="padding:14px; display:flex; justify-content:center;"></div>
+                <div id="qrCountdownText" style="padding-bottom:8px; font-size:11px; color:#e11d48; font-weight:bold;">សុពលភាព៖ 05:00</div>
+            </div>
+            <div class="scanning-indicator">
+                <div class="pulse-dot"></div>
+                <span>កំពុងរង់ចាំការទូទាត់ប្រាក់ដោយស្វ័យប្រវត្តិ...</span>
+            </div>
+            <button style="background:none; border:none; color:#94a3b8; margin-top:14px; cursor:pointer; text-decoration:underline;" onclick="closeQrModal()">បោះបង់ / បិទផ្ទាំងនេះ</button>
+        </div>
+
+        <div id="expiredView" style="display:none; padding:10px 0;">
+            <div style="font-size:44px; margin-bottom:10px;">⏳</div>
+            <h3 style="color:#f43f5e; margin-bottom:8px;">កូដ KHQR នេះផុតកំណត់ហើយ!</h3>
+            <p style="font-size:13px; color:#cbd5e1; margin-bottom:16px;">ដើម្បីសុវត្ថិភាព កូដ KHQR នីមួយៗអាចប្រើបានតែម្តង និងមានសុពលភាព ៥ នាទីប៉ុណ្ណោះ។ សូមចុចទិញម្តងទៀតដើម្បីបង្កើតកូដថ្មី។</p>
+            <button class="btn btn-buy" onclick="closeQrModal()">យល់ព្រម (បិទផ្ទាំងនេះ)</button>
+        </div>
+
+        <div id="thankYouView" style="display:none;">
+            <div class="check-circle">✓</div>
+            <h2 style="color:#10b981; font-size:20px; margin-bottom:6px;">ការទូទាត់ជោគជ័យ!</h2>
+            <p id="thankYouSubText" style="font-size:13px; color:#cbd5e1; line-height:1.4;">សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY TOPUP STORE</b>។</p>
+            
+            <div id="deliveredAccountBox" class="cred-box" style="display:none;">
+                <div style="font-size:12px; color:#10b981; font-weight:bold;">🎉 ព័ត៌មានគណនីហ្គេមរបស់អ្នក (រក្សាទុកក្នុងប្រវត្តិការទិញរួចរាល់)៖</div>
+                <div class="cred-field">
+                    <div>
+                        <div style="font-size:10px; color:#94a3b8;">Gmail / Username:</div>
+                        <b id="delivLogin" style="color:#fff;"></b>
+                    </div>
+                    <button class="copy-btn" onclick="copyRawText(document.getElementById('delivLogin').innerText)">ចម្លង</button>
+                </div>
+                <div class="cred-field">
+                    <div>
+                        <div style="font-size:10px; color:#94a3b8;">Password:</div>
+                        <b id="delivPass" style="color:#fbbf24;"></b>
+                    </div>
+                    <button class="copy-btn" onclick="copyRawText(document.getElementById('delivPass').innerText)">ចម្លង</button>
+                </div>
+            </div>
+
+            <div class="receipt-box">
+                <div class="receipt-row">
+                    <span style="color:#94a3b8;">វិក្កយបត្រ៖</span>
+                    <span id="recBill" style="font-weight:bold; color:#38bdf8;"></span>
+                </div>
+                <div class="receipt-row">
+                    <span style="color:#94a3b8;">ហ្គេម៖</span>
+                    <span id="recGame" style="font-weight:bold;"></span>
+                </div>
+                <div class="receipt-row">
+                    <span style="color:#94a3b8;">ផលិតផល៖</span>
+                    <span id="recItem" style="font-weight:bold;"></span>
+                </div>
+                <div class="receipt-row" id="recPlayerRow">
+                    <span style="color:#94a3b8;">គណនីហ្គេម៖</span>
+                    <span id="recPlayer" style="font-weight:bold; color:#fbbf24;"></span>
+                </div>
+                <div class="receipt-row">
+                    <span style="color:#94a3b8;">ទឹកប្រាក់បានបង់៖</span>
+                    <span id="recAmount" style="font-weight:bold; color:#10b981;"></span>
+                </div>
+            </div>
+
+            <button class="btn btn-buy" onclick="closeQrModal(); goHomePage();">រួចរាល់ (ត្រឡប់ទៅទំព័រដើម)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "https://kty-store.onrender.com";
+    const BOT_USERNAME = "KTYlogin_bot";
+    const SITE_LOGO = "https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png";
+    const DEFAULT_GAME_ICON = "https://cdn-icons-png.flaticon.com/512/686/686589.png";
+    const DEFAULT_ITEM_ICON = "https://cdn-icons-png.flaticon.com/512/616/616490.png";
+
+    let storeData = { banners: [], games: [], items: [], accounts: [] };
+    let adminAccountsCache = [];
+    let currentUser = JSON.parse(localStorage.getItem("kty_tg_user") || "null");
+
+    let selectedGame = null;
+    let selectedItem = null;
+    let selectedAccount = null;
+
+    let currentMD5 = "";
+    let pollingTimer = null;
+    let countdownTimer = null;
+    let bannerIndex = 0;
+
+    let editingBannerIndex = null;
+    let editingGameId = null;
+    let editingItemId = null;
+    let editingAccountId = null;
+    let uploadedAccImages = [];
+
+    // អថេរសម្រាប់ប្រព័ន្ធឆាត
+    let activeChatRoomId = null;
+    let chatPollTimer = null;
+    let adminChatTab = "recent"; // "recent" ឬ "all"
+    let adminChatOverviewData = { recent_rooms: [], all_users: [] };
+
+    window.onload = async () => {
+        checkAuth();
+        renderGames();
+        await fetchStoreData();
+        setInterval(nextBanner, 4000);
+        setInterval(checkChatUnreadBackground, 6000);
+        checkChatUnreadBackground();
+    };
+
+    function isAdminUser() {
+        return currentUser && currentUser.username && currentUser.username.toLowerCase() === "ktyofficial169";
     }
-    room["messages"].append(msg_obj)
-    if len(room["messages"]) > 150:
-        room["messages"] = room["messages"][-150:]
 
-    save_data(d, sync_cloud=True)
-    return jsonify({"success": True, "message": msg_obj})
-
-@app.route('/api/chat/room', methods=['POST'])
-def chat_get_room():
-    payload = request.get_json(silent=True) or {}
-    room_id = str(payload.get("room_id", "")).strip()
-    viewer_is_admin = bool(payload.get("is_admin", False))
-    d = load_data()
-    room = d.get("chats", {}).get(room_id)
-    if not room:
-        return jsonify({"success": True, "messages": [], "unread_user": 0})
-
-    changed = False
-    if viewer_is_admin and room.get("unread_admin", 0) > 0:
-        room["unread_admin"] = 0
-        changed = True
-    elif not viewer_is_admin and room.get("unread_user", 0) > 0:
-        room["unread_user"] = 0
-        changed = True
-
-    if changed:
-        save_data(d, sync_cloud=False)
-
-    return jsonify({
-        "success": True,
-        "messages": room.get("messages", []),
-        "unread_user": room.get("unread_user", 0)
-    })
-
-# ទាញយកទាំង "អតិថិជនឆាតមកថ្មីៗ" និង "អតិថិជនទាំងអស់ដែលបានចុះឈ្មោះ" សម្រាប់ Admin
-@app.route('/api/chat/admin/overview', methods=['POST'])
-def chat_admin_overview():
-    d = load_data()
-    chats = d.get("chats", {})
-    users = d.get("users", {})
-
-    recent_rooms = []
-    total_unread = 0
-
-    # តម្រៀបបន្ទប់ឆាតតាមពេលវេលាចុងក្រោយ
-    sorted_chats = sorted(chats.items(), key=lambda x: x[1].get("updated_ts", 0), reverse=True)
-    for r_id, r_data in sorted_chats:
-        msgs = r_data.get("messages", [])
-        if not msgs:
-            continue
-        last_msg = msgs[-1]
-        unread = r_data.get("unread_admin", 0)
-        total_unread += unread
-        recent_rooms.append({
-            "room_id": r_id,
-            "user_name": r_data.get("user_name", "User"),
-            "user_username": r_data.get("user_username", ""),
-            "user_photo": r_data.get("user_photo", ""),
-            "unread_admin": unread,
-            "last_preview": last_msg.get("text", ""),
-            "last_time": last_msg.get("time", "")
-        })
-
-    # បញ្ជីអតិថិជនទាំងអស់ដែលបានចុះឈ្មោះក្នុងវេបសាយ (មិនរាប់បញ្ចូល Admin ខ្លួនឯង)
-    all_users = []
-    for u_id, u_data in users.items():
-        if u_data.get("username", "").lower() == ADMIN_USERNAME:
-            continue
-        all_users.append({
-            "user_id": str(u_id),
-            "user_name": u_data.get("first_name", "User"),
-            "user_username": u_data.get("username", ""),
-            "user_photo": u_data.get("photo_url", ""),
-            "joined_at": u_data.get("joined_at", "")
-        })
-
-    return jsonify({
-        "success": True,
-        "recent_rooms": recent_rooms,
-        "all_users": list(reversed(all_users)),
-        "total_unread": total_unread
-    })
-
-# ==================== ការគ្រប់គ្រងគណនីហ្គេម & ការទូទាត់ KHQR ====================
-@app.route('/api/admin/accounts', methods=['POST'])
-def get_admin_accounts():
-    d = load_data()
-    return jsonify({"success": True, "accounts": d.get("accounts", [])})
-
-@app.route('/api/admin/account/save', methods=['POST'])
-def save_admin_account():
-    payload = request.get_json(silent=True) or {}
-    d = load_data()
-    acc_data = payload.get("account")
-    if not acc_data:
-        return jsonify({"success": False, "error": "ទិន្នន័យមិនត្រឹមត្រូវ"}), 400
-
-    acc_id = acc_data.get("id")
-    existing_idx = next((i for i, a in enumerate(d["accounts"]) if a["id"] == acc_id), -1)
-
-    new_acc = {
-        "id": acc_id or f"acc_{int(time.time())}",
-        "title": str(acc_data.get("title", "")).strip(),
-        "game_name": str(acc_data.get("game_name", "")).strip(),
-        "price": round(float(acc_data.get("price", 0)), 2),
-        "stock": int(acc_data.get("stock", 1)),
-        "description": str(acc_data.get("description", "")).strip(),
-        "acc_login": str(acc_data.get("acc_login", "")).strip(),
-        "acc_password": str(acc_data.get("acc_password", "")).strip(),
-        "images": acc_data.get("images", [])[:10]
-    }
-
-    if existing_idx != -1:
-        d["accounts"][existing_idx] = new_acc
-    else:
-        d["accounts"].append(new_acc)
-
-    save_data(d, sync_cloud=True)
-    return jsonify({"success": True})
-
-@app.route('/api/admin/account/delete', methods=['POST'])
-def delete_admin_account():
-    payload = request.get_json(silent=True) or {}
-    acc_id = payload.get("acc_id")
-    d = load_data()
-    d["accounts"] = [a for a in d["accounts"] if a["id"] != acc_id]
-    save_data(d, sync_cloud=True)
-    return jsonify({"success": True})
-
-@app.route('/api/auth/telegram', methods=['POST'])
-def auth_telegram():
-    auth_data = request.get_json(silent=True) or {}
-    if not verify_telegram_auth(auth_data):
-        return jsonify({"success": False, "error": "ការផ្ទៀងផ្ទាត់គណនី Telegram មិនត្រឹមត្រូវ!"}), 401
-
-    tg_id = str(auth_data.get("id"))
-    username = auth_data.get("username", "")
-    first_name = auth_data.get("first_name", "User")
-    last_name = auth_data.get("last_name", "")
-    full_name = f"{first_name} {last_name}".strip()
-    photo_url = auth_data.get("photo_url", "")
-
-    d = load_data()
-    is_new = tg_id not in d["users"]
-    d["users"][tg_id] = {
-        "id": tg_id,
-        "username": username,
-        "first_name": full_name,
-        "photo_url": photo_url,
-        "joined_at": time.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    save_data(d, sync_cloud=True)
-
-    if is_new:
-        msg = (
-            f"🆕 <b>សមាជិកថ្មីទើបចុះឈ្មោះលើ Website!</b>\n"
-            f"👤 ឈ្មោះ៖ {full_name}\n"
-            f"🔗 Username៖ @{username if username else 'គ្មាន'}\n"
-            f"🆔 Telegram ID៖ <code>{tg_id}</code>"
-        )
-        send_telegram_group(msg)
-
-    return jsonify({"success": True, "user": d["users"][tg_id]})
-
-@app.route('/api/orders/history', methods=['POST'])
-def get_order_history():
-    payload = request.get_json(silent=True) or {}
-    tg_id = str(payload.get("tg_id", "")).strip()
-    d = load_data()
-    user_orders = [o for o in d["orders"] if str(o.get("tg_id", "")).strip() == tg_id]
-    return jsonify({"success": True, "orders": list(reversed(user_orders))})
-
-@app.route('/api/admin/orders', methods=['POST'])
-def get_all_orders_admin():
-    d = load_data()
-    return jsonify({"success": True, "orders": list(reversed(d["orders"]))})
-
-@app.route('/api/store/save', methods=['POST'])
-def update_store():
-    payload = request.get_json(silent=True) or {}
-    d = load_data()
-    new_data = payload.get("data")
-    if new_data:
-        d["banners"] = new_data.get("banners", d["banners"])
-        d["games"] = new_data.get("games", d["games"])
-        d["items"] = new_data.get("items", d["items"])
-        save_data(d, sync_cloud=True)
-        return jsonify({"success": True})
-    return jsonify({"success": False, "error": "Invalid data"}), 400
-
-@app.route('/api/create-order', methods=['POST'])
-def create_order():
-    data = request.get_json(silent=True) or {}
-    tg_id = str(data.get("tg_id", "")).strip()
-    tg_username = str(data.get("tg_username", "")).strip()
-    tg_name = str(data.get("tg_name", "")).strip()
-    order_type = data.get("order_type", "ITEM")
-    d = load_data()
-    user = d["users"].get(tg_id) if tg_id else None
-
-    if order_type == "ACCOUNT":
-        acc_id = data.get("account_id")
-        acc = next((a for a in d["accounts"] if a["id"] == acc_id), None)
-        if not acc:
-            return jsonify({"success": False, "error": "រកមិនឃើញគណនីហ្គេមនេះទេ!"}), 404
-        if acc["stock"] <= 0:
-            return jsonify({"success": False, "error": "គណនីហ្គេមនេះអស់ស្តុកហើយ!"}), 400
-
-        game_name = acc["game_name"]
-        item_name = acc["title"]
-        player_info = "ទិញគណនីហ្គេម (Auto Delivery)"
-        price_usd = float(acc["price"])
-    else:
-        acc_id = ""
-        item_name = str(data.get("item_name", "Game Item")).strip()
-        game_name = str(data.get("game_name", "Game")).strip()
-        player_info = str(data.get("player_info", "")).strip()
-        price_usd = float(data.get("price", 0))
-
-    if price_usd <= 0:
-        return jsonify({"success": False, "error": "តម្លៃមិនត្រឹមត្រូវ!"}), 400
-
-    try:
-        unique_nonce = uuid.uuid4().hex[:6].upper()
-        bill_no = f"KTY-{int(time.time())}-{unique_nonce}"
-        
-        qr_string = khqr.create_qr(
-            account_id=BAKONG_ID,
-            merchant_name="KTY TOPUP STORE",
-            merchant_city="Phnom Penh",
-            amount=round(price_usd, 2),
-            currency="USD",
-            store_label=f"KTY-{unique_nonce}",
-            phone_number="855979556757",
-            bill_number=bill_no,
-            terminal_label=f"T-{unique_nonce}",
-            static=False
-        )
-        md5_hash = khqr.generate_md5(qr_string)
-
-        order_record = {
-            "bill_number": bill_no,
-            "md5": md5_hash,
-            "order_type": order_type,
-            "account_id": acc_id,
-            "tg_id": tg_id if tg_id else "GUEST",
-            "tg_username": user.get("username", tg_username) if user else tg_username,
-            "tg_name": user.get("first_name", tg_name or "ភ្ញៀវទូទៅ (Guest)") if user else (tg_name or "ភ្ញៀវទូទៅ (Guest)"),
-            "game_name": game_name,
-            "item_name": item_name,
-            "player_info": player_info,
-            "amount": round(price_usd, 2),
-            "status": "PENDING",
-            "used": False,
-            "created_ts": time.time(),
-            "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+    function getChatUserIdentity() {
+        if (currentUser && currentUser.id) {
+            return {
+                id: String(currentUser.id),
+                name: currentUser.first_name || "User",
+                username: currentUser.username || "",
+                photo: currentUser.photo_url || DEFAULT_GAME_ICON
+            };
         }
-        d["orders"].append(order_record)
-        save_data(d, sync_cloud=False)
+        let guestId = localStorage.getItem("kty_guest_chat_id");
+        if (!guestId) {
+            guestId = "guest_" + Math.floor(100000 + Math.random() * 900000);
+            localStorage.setItem("kty_guest_chat_id", guestId);
+        }
+        return {
+            id: guestId,
+            name: `ភ្ញៀវ #${guestId.slice(-4)}`,
+            username: "",
+            photo: DEFAULT_GAME_ICON
+        };
+    }
 
-        return jsonify({
-            "success": True,
-            "qr_string": qr_string,
-            "md5": md5_hash,
-            "amount": round(price_usd, 2),
-            "bill_number": bill_no,
-            "expires_in": 300
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    // ==================== មុខងារប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Text Only) ====================
+    async function checkChatUnreadBackground() {
+        const badge = document.getElementById("chatUnreadBadge");
+        try {
+            if (isAdminUser()) {
+                const res = await fetch(`${API_URL}/api/chat/admin/overview`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    adminChatOverviewData = data;
+                    if (data.total_unread > 0) {
+                        badge.style.display = "inline-block";
+                        badge.innerText = data.total_unread;
+                    } else {
+                        badge.style.display = "none";
+                    }
+                }
+            } else {
+                const me = getChatUserIdentity();
+                const res = await fetch(`${API_URL}/api/chat/room`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ room_id: me.id, is_admin: false })
+                });
+                const data = await res.json();
+                if (data.success && data.unread_user > 0 && document.getElementById("chatModal").style.display !== "flex") {
+                    badge.style.display = "inline-block";
+                    badge.innerText = data.unread_user;
+                } else {
+                    badge.style.display = "none";
+                }
+            }
+        } catch (e) {}
+    }
 
-@app.route('/api/check-payment', methods=['POST'])
-def check_payment():
-    data = request.get_json(silent=True) or {}
-    md5_hash = data.get("md5")
-    if not md5_hash:
-        return jsonify({"success": False, "error": "Missing MD5"}), 400
+    function openChatModal() {
+        document.getElementById("chatModal").style.display = "flex";
+        if (isAdminUser()) {
+            showAdminChatDirectory();
+        } else {
+            const me = getChatUserIdentity();
+            activeChatRoomId = me.id;
+            document.getElementById("chatBackToRoomsBtn").style.display = "none";
+            document.getElementById("adminChatDirectoryView").style.display = "none";
+            document.getElementById("chatConversationView").style.display = "flex";
+            document.getElementById("chatHeaderAvatar").src = SITE_LOGO;
+            document.getElementById("chatHeaderTitle").innerText = "KTY STORE (ម្ចាស់វេបសាយ)";
+            document.getElementById("chatHeaderSub").innerText = "● ជជែកផ្ទាល់ជាមួយម្ចាស់ហាង";
+            loadChatMessages(true);
+        }
 
-    d = load_data()
-    order = next((o for o in d["orders"] if o["md5"] == md5_hash), None)
-    if not order:
-        return jsonify({"success": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
+        if (chatPollTimer) clearInterval(chatPollTimer);
+        chatPollTimer = setInterval(() => {
+            if (document.getElementById("chatModal").style.display !== "flex") return;
+            if (isAdminUser() && !activeChatRoomId) {
+                fetchAdminChatOverview();
+            } else if (activeChatRoomId) {
+                loadChatMessages(false);
+            }
+        }, 3000);
+    }
 
-    if order.get("status") == "PAID" or order.get("used"):
-        return jsonify({"success": True, "status": "PAID", "order": order})
+    function closeChatModal() {
+        document.getElementById("chatModal").style.display = "none";
+        if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+        checkChatUnreadBackground();
+    }
 
-    if time.time() - order.get("created_ts", 0) > 300:
-        order["status"] = "EXPIRED"
-        order["used"] = True
-        save_data(d, sync_cloud=False)
-        return jsonify({"success": True, "status": "EXPIRED"})
+    async function showAdminChatDirectory() {
+        activeChatRoomId = null;
+        document.getElementById("chatBackToRoomsBtn").style.display = "none";
+        document.getElementById("chatConversationView").style.display = "none";
+        document.getElementById("adminChatDirectoryView").style.display = "flex";
+        document.getElementById("chatHeaderAvatar").src = SITE_LOGO;
+        document.getElementById("chatHeaderTitle").innerText = "ប្រអប់សារអតិថិជន";
+        document.getElementById("chatHeaderSub").innerText = "● ជ្រើសរើសអតិថិជនដើម្បីឆាត";
+        await fetchAdminChatOverview();
+    }
 
-    try:
-        status = khqr.check_payment(md5_hash)
-        if status == "PAID":
-            order["status"] = "PAID"
-            order["used"] = True
-            order["paid_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    function switchAdminChatTab(tabName) {
+        adminChatTab = tabName;
+        document.getElementById("tabRecentChatsBtn").classList.toggle("active", tabName === "recent");
+        document.getElementById("tabAllUsersBtn").classList.toggle("active", tabName === "all");
+        document.getElementById("adminChatSearchBox").style.display = tabName === "all" ? "block" : "none";
+        renderAdminChatDirectory();
+    }
 
-            if order.get("order_type") == "ACCOUNT":
-                acc = next((a for a in d["accounts"] if a["id"] == order.get("account_id")), None)
-                if acc:
-                    order["delivered_login"] = acc.get("acc_login", "")
-                    order["delivered_password"] = acc.get("acc_password", "")
-                    if acc["stock"] > 0:
-                        acc["stock"] -= 1
+    async function fetchAdminChatOverview() {
+        try {
+            const res = await fetch(`${API_URL}/api/chat/admin/overview`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (data.success) {
+                adminChatOverviewData = data;
+                renderAdminChatDirectory();
+            }
+        } catch (e) {}
+    }
 
-            save_data(d, sync_cloud=True)
+    function renderAdminChatDirectory() {
+        const listEl = document.getElementById("adminChatRoomsList");
+        if (adminChatTab === "recent") {
+            const rooms = adminChatOverviewData.recent_rooms || [];
+            if (rooms.length === 0) {
+                listEl.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:30px 10px; font-size:13px;">មិនទាន់មានអតិថិជនឆាតមកថ្មីៗនៅឡើយទេ។<br><span style="font-size:11px; color:#38bdf8;">ចុចលើក្រឡោន "👥 អតិថិជនទាំងអស់" ដើម្បីចាប់ផ្តើមឆាតទៅពួកគេ!</span></div>`;
+                return;
+            }
+            listEl.innerHTML = rooms.map(r => `
+                <div class="chat-room-item" onclick="openAdminRoom('${r.room_id}', '${escapeJs(r.user_name)}', '${r.user_photo || ''}', '${r.user_username || ''}')">
+                    <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+                        <img src="${r.user_photo || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+                        <div style="overflow:hidden;">
+                            <div style="font-weight:bold; font-size:13px; color:#fff;">${escapeHtml(r.user_name)} ${r.user_username ? '(@' + escapeHtml(r.user_username) + ')' : ''}</div>
+                            <div style="font-size:11px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;">${escapeHtml(r.last_preview || '')}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0;">
+                        <div style="font-size:10px; color:#64748b;">${r.last_time}</div>
+                        ${r.unread_admin > 0 ? `<span style="background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold;">${r.unread_admin}</span>` : ''}
+                    </div>
+                </div>
+            `).join("");
+        } else {
+            const keyword = (document.getElementById("adminUserSearchInput").value || "").toLowerCase().trim();
+            const users = (adminChatOverviewData.all_users || []).filter(u =>
+                (u.user_name || "").toLowerCase().includes(keyword) ||
+                (u.user_username || "").toLowerCase().includes(keyword) ||
+                (u.user_id || "").includes(keyword)
+            );
+            if (users.length === 0) {
+                listEl.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:30px 10px; font-size:13px;">មិនមានអតិថិជនដែលបានចុះឈ្មោះនៅឡើយទេ។</div>`;
+                return;
+            }
+            listEl.innerHTML = users.map(u => `
+                <div class="chat-room-item" onclick="openAdminRoom('${u.user_id}', '${escapeJs(u.user_name)}', '${u.user_photo || ''}', '${u.user_username || ''}')">
+                    <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+                        <img src="${u.user_photo || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+                        <div style="overflow:hidden;">
+                            <div style="font-weight:bold; font-size:13px; color:#fff;">${escapeHtml(u.user_name)}</div>
+                            <div style="font-size:11px; color:#38bdf8;">${u.user_username ? '@' + escapeHtml(u.user_username) : 'ID: ' + u.user_id}</div>
+                        </div>
+                    </div>
+                    <span style="background:#0284c7; color:#fff; font-size:11px; padding:5px 10px; border-radius:14px; font-weight:bold; flex-shrink:0;">💬 ឆាត</span>
+                </div>
+            `).join("");
+        }
+    }
 
-            if order["tg_id"] == "GUEST":
-                buyer_text = "ភ្ញៀវទូទៅ (Guest)"
-            else:
-                tg_tag = f"@{order['tg_username']}" if order.get("tg_username") else order.get("tg_name")
-                buyer_text = f"{tg_tag} (<code>{order['tg_id']}</code>)"
+    function openAdminRoom(roomId, userName, userPhoto, userUsername) {
+        activeChatRoomId = roomId;
+        document.getElementById("chatBackToRoomsBtn").style.display = "inline-block";
+        document.getElementById("adminChatDirectoryView").style.display = "none";
+        document.getElementById("chatConversationView").style.display = "flex";
+        document.getElementById("chatHeaderAvatar").src = userPhoto || DEFAULT_GAME_ICON;
+        document.getElementById("chatHeaderTitle").innerText = userName;
+        document.getElementById("chatHeaderSub").innerText = userUsername ? `@${userUsername}` : `ID: ${roomId}`;
+        loadChatMessages(true);
+    }
 
-            if order.get("order_type") == "ACCOUNT":
-                msg = (
-                    f"🔐 <b>លក់គណនីហ្គេមជោគជ័យ (PAID ✅)</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━\n"
-                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>\n"
-                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
-                    f"🏷️ ឈ្មោះគណនី៖ <b>{order['item_name']}</b>\n"
-                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b>\n"
-                    f"👤 អ្នកទិញ៖ {buyer_text}\n"
-                    f"📧 User/Gmail៖ <code>{order.get('delivered_login', '')}</code>\n"
-                    f"🔑 Password៖ <code>{order.get('delivered_password', '')}</code>\n"
-                    f"⏰ ម៉ោងបង់ប្រាក់៖ {order['paid_at']}"
-                )
-            else:
-                msg = (
-                    f"💰 <b>មានការបញ្ជាទិញថ្មី (PAID ✅)</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━\n"
-                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>\n"
-                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
-                    f"💎 កញ្ចប់ Item៖ <b>{order['item_name']}</b>\n"
-                    f"🆔 គណនីហ្គេម៖ <code>{order['player_info']}</code>\n"
-                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b>\n"
-                    f"👤 អ្នកទិញ៖ {buyer_text}\n"
-                    f"⏰ ម៉ោងបង់ប្រាក់៖ {order['paid_at']}"
-                )
-            send_telegram_group(msg)
-            return jsonify({"success": True, "status": "PAID", "order": order})
+    async function loadChatMessages(scrollBottom) {
+        if (!activeChatRoomId) return;
+        const area = document.getElementById("chatMessagesArea");
+        const adminFlag = isAdminUser();
+        try {
+            const res = await fetch(`${API_URL}/api/chat/room`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ room_id: activeChatRoomId, is_admin: adminFlag })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const msgs = data.messages || [];
+                if (msgs.length === 0) {
+                    area.innerHTML = `<div style="text-align:center; color:#94a3b8; font-size:12px; margin-top:30px;">👋 សួស្តី! សូមសរសេរសារជាអក្សរដើម្បីចាប់ផ្តើមជជែក។</div>`;
+                    return;
+                }
+                const wasAtBottom = area.scrollHeight - area.scrollTop <= area.clientHeight + 60;
+                area.innerHTML = msgs.map(m => {
+                    const isMine = adminFlag ? m.is_admin : !m.is_admin;
+                    const avatar = m.is_admin ? SITE_LOGO : (m.sender_photo || DEFAULT_GAME_ICON);
+                    return `
+                        <div class="msg-row ${isMine ? 'mine' : ''}">
+                            <img class="msg-avatar" src="${avatar}" onerror="this.src='${DEFAULT_GAME_ICON}'">
+                            <div class="msg-bubble">
+                                <div class="msg-sender">${m.is_admin ? '👑 KTY STORE' : escapeHtml(m.sender_name)}</div>
+                                <div>${escapeHtml(m.text)}</div>
+                                <div class="msg-time">${m.time}</div>
+                            </div>
+                        </div>`;
+                }).join("");
 
-        return jsonify({"success": True, "status": status})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+                if (scrollBottom || wasAtBottom) {
+                    area.scrollTop = area.scrollHeight;
+                }
+            }
+        } catch (e) {}
+    }
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    function escapeHtml(str) {
+        return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function escapeJs(str) {
+        return String(str || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    }
+
+    async function sendChatText() {
+        const input = document.getElementById("chatTextInput");
+        const text = input.value.trim();
+        if (!text || !activeChatRoomId) return;
+        input.value = "";
+
+        const me = getChatUserIdentity();
+        const adminFlag = isAdminUser();
+        try {
+            await fetch(`${API_URL}/api/chat/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    room_id: activeChatRoomId,
+                    sender_id: me.id,
+                    sender_name: adminFlag ? "KTY STORE" : me.name,
+                    sender_username: me.username,
+                    sender_photo: adminFlag ? SITE_LOGO : me.photo,
+                    is_admin: adminFlag,
+                    text: text
+                })
+            });
+            await loadChatMessages(true);
+        } catch (e) {}
+    }
+
+    // ==================== មុខងារហាង និងការទូទាត់ KHQR ====================
+    function getUserOrdersKey() {
+        return currentUser && currentUser.id ? `kty_orders_${String(currentUser.id)}` : "kty_orders_guest";
+    }
+
+    function getLocalOrders() {
+        return JSON.parse(localStorage.getItem(getUserOrdersKey()) || "[]");
+    }
+
+    function saveOrderLocally(order) {
+        if (!order || !order.bill_number) return;
+        let list = getLocalOrders();
+        const idx = list.findIndex(x => x.bill_number === order.bill_number);
+        if (idx !== -1) list[idx] = order;
+        else list.unshift(order);
+        localStorage.setItem(getUserOrdersKey(), JSON.stringify(list));
+    }
+
+    function goHomePage() {
+        selectedGame = null;
+        selectedItem = null;
+        selectedAccount = null;
+        document.getElementById("gameDetailView").style.display = "none";
+        document.getElementById("accountDetailView").style.display = "none";
+        document.getElementById("homePageView").style.display = "block";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openGamePage(game) {
+        selectedGame = game;
+        selectedItem = null;
+
+        document.getElementById("homePageView").style.display = "none";
+        document.getElementById("accountDetailView").style.display = "none";
+        document.getElementById("gameDetailView").style.display = "block";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const heroImg = document.getElementById("heroGameImg");
+        heroImg.src = game.image || DEFAULT_GAME_ICON;
+        heroImg.onerror = () => { heroImg.src = DEFAULT_GAME_ICON; };
+        document.getElementById("heroGameName").innerText = game.name;
+        document.getElementById("selectedGameTitle").innerText = `បំពេញព័ត៌មាន (${game.name})`;
+
+        const dynInputs = document.getElementById("dynamicInputs");
+        dynInputs.innerHTML = "";
+        let hasInput = false;
+
+        if (game.input1_enabled) {
+            hasInput = true;
+            dynInputs.innerHTML += `
+                <div class="input-group">
+                    <label>${game.input1_label || "គណនី / ID"}</label>
+                    <input type="text" id="custInput1" placeholder="${game.input1_placeholder || ""}">
+                </div>`;
+        }
+        if (game.input2_enabled) {
+            hasInput = true;
+            dynInputs.innerHTML += `
+                <div class="input-group">
+                    <label>${game.input2_label || "Server ID"}</label>
+                    <input type="text" id="custInput2" placeholder="${game.input2_placeholder || ""}">
+                </div>`;
+        }
+
+        const noteEl = document.getElementById("gameInputNote");
+        if (game.input_note) {
+            noteEl.style.display = "block";
+            noteEl.innerText = game.input_note;
+        } else {
+            noteEl.style.display = "none";
+        }
+        document.getElementById("playerInputBox").style.display = (hasInput || game.input_note) ? "block" : "none";
+
+        const itemsGrid = document.getElementById("itemsGrid");
+        itemsGrid.innerHTML = "";
+        const gameItems = storeData.items.filter(i => i.game_id === game.id);
+
+        if (gameItems.length === 0) {
+            itemsGrid.innerHTML = `<div style="color:#94a3b8; font-size:13px; grid-column:span 2; text-align:center; padding:12px;">មិនទាន់មានកញ្ចប់ Item សម្រាប់ហ្គេមនេះទេ។</div>`;
+        }
+
+        gameItems.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "item-card";
+            card.innerHTML = `
+                <img src="${item.image || DEFAULT_ITEM_ICON}" onerror="this.src='${DEFAULT_ITEM_ICON}'">
+                <div>
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-price">$${parseFloat(item.price).toFixed(2)}</div>
+                </div>
+            `;
+            card.onclick = () => {
+                document.querySelectorAll(".item-card").forEach(c => c.classList.remove("active"));
+                card.classList.add("active");
+                selectedItem = item;
+                document.getElementById("checkoutSummary").innerText = `${item.name} - $${parseFloat(item.price).toFixed(2)}`;
+            };
+            itemsGrid.appendChild(card);
+        });
+
+        document.getElementById("checkoutSummary").innerText = "$0.00";
+        document.getElementById("orderError").innerText = "";
+    }
+
+    function openAccountPage(acc) {
+        selectedAccount = acc;
+        document.getElementById("homePageView").style.display = "none";
+        document.getElementById("gameDetailView").style.display = "none";
+        document.getElementById("accountDetailView").style.display = "block";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const gallery = document.getElementById("accDetailGallery");
+        gallery.innerHTML = "";
+        const imgs = (acc.images && acc.images.length > 0) ? acc.images : [];
+        if (imgs.length === 0) {
+            gallery.innerHTML = `<img src="${DEFAULT_GAME_ICON}">`;
+        } else {
+            imgs.forEach(fid => {
+                gallery.innerHTML += `<img src="${API_URL}/api/tg-image/${fid}" onerror="this.src='${DEFAULT_GAME_ICON}'">`;
+            });
+        }
+
+        document.getElementById("accDetailGame").innerText = `🎮 ${acc.game_name}`;
+        document.getElementById("accDetailTitle").innerText = acc.title;
+        document.getElementById("accDetailPrice").innerText = `$${parseFloat(acc.price).toFixed(2)}`;
+        document.getElementById("accDetailDesc").innerText = acc.description || "គ្មានការពិពណ៌នាបន្ថែមទេ។";
+        document.getElementById("accOrderError").innerText = "";
+
+        const stockEl = document.getElementById("accDetailStock");
+        const buyBtn = document.getElementById("buyAccBtn");
+        if (acc.stock > 0) {
+            stockEl.className = "acc-stock stock-in";
+            stockEl.innerText = `នៅសល់ស្តុក៖ ${acc.stock}`;
+            buyBtn.disabled = false;
+            buyBtn.innerText = `ទិញគណនីនេះឥឡូវនេះ ($${parseFloat(acc.price).toFixed(2)})`;
+        } else {
+            stockEl.className = "acc-stock stock-out";
+            stockEl.innerText = "អស់ស្តុក (Sold Out)";
+            buyBtn.disabled = true;
+            buyBtn.innerText = "អស់ស្តុកហើយ";
+        }
+    }
+
+    function checkAuth() {
+        const authArea = document.getElementById("authArea");
+        const adminPanel = document.getElementById("adminPanel");
+
+        if (currentUser && currentUser.id) {
+            const displayTag = currentUser.first_name || (currentUser.username ? `@${currentUser.username}` : "User");
+            const avatarHtml = currentUser.photo_url ? `<img src="${currentUser.photo_url}">` : `👤`;
+            authArea.innerHTML = `<button class="tg-btn" style="background:#1e293b; border:1px solid #38bdf8;" onclick="openProfileModal()">${avatarHtml} <span>${displayTag}</span></button>`;
+            
+            if (isAdminUser()) {
+                adminPanel.style.display = "block";
+                loadAdminAccounts();
+                loadAdminOrders();
+            } else {
+                adminPanel.style.display = "none";
+            }
+        } else {
+            authArea.innerHTML = `<button class="tg-btn" onclick="openLoginModal()">✈️ ចុះឈ្មោះតាម Telegram</button>`;
+            adminPanel.style.display = "none";
+        }
+    }
+
+    function openLoginModal() {
+        document.getElementById("loginError").innerText = "";
+        const widgetContainer = document.getElementById("tgWidgetContainer");
+        widgetContainer.innerHTML = "";
+
+        const script = document.createElement("script");
+        script.src = "https://telegram.org/js/telegram-widget.js?22";
+        script.async = true;
+        script.setAttribute("data-telegram-login", BOT_USERNAME);
+        script.setAttribute("data-size", "large");
+        script.setAttribute("data-radius", "20");
+        script.setAttribute("data-onauth", "onTelegramAuth(user)");
+        script.setAttribute("data-request-access", "write");
+        widgetContainer.appendChild(script);
+
+        document.getElementById("loginModal").style.display = "flex";
+    }
+
+    async function onTelegramAuth(user) {
+        try {
+            const res = await fetch(`${API_URL}/api/auth/telegram`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(user)
+            });
+            const data = await res.json();
+            if (data.success) {
+                currentUser = data.user;
+                localStorage.setItem("kty_tg_user", JSON.stringify(currentUser));
+                checkAuth();
+                renderAdminLists();
+                closeModal("loginModal");
+                checkChatUnreadBackground();
+            } else {
+                document.getElementById("loginError").innerText = data.error;
+            }
+        } catch (e) {
+            document.getElementById("loginError").innerText = "មិនអាចភ្ជាប់ទៅ Backend Server បានទេ!";
+        }
+    }
+
+    async function openProfileModal() {
+        if (!currentUser) return;
+        document.getElementById("profileTitle").innerText = currentUser.first_name;
+        document.getElementById("profileSub").innerText = `@${currentUser.username || 'NoUsername'} | ID: ${currentUser.id}`;
+        const listEl = document.getElementById("orderHistoryList");
+        listEl.innerHTML = "⏳ កំពុងទាញយកប្រវត្តិការទិញ...";
+        document.getElementById("profileModal").style.display = "flex";
+
+        let combinedOrders = [...getLocalOrders()];
+
+        try {
+            const res = await fetch(`${API_URL}/api/orders/history`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tg_id: String(currentUser.id) })
+            });
+            const data = await res.json();
+            if (data.orders && data.orders.length > 0) {
+                data.orders.forEach(srvOrder => {
+                    const idx = combinedOrders.findIndex(x => x.bill_number === srvOrder.bill_number);
+                    if (idx !== -1) combinedOrders[idx] = srvOrder;
+                    else combinedOrders.push(srvOrder);
+                    saveOrderLocally(srvOrder);
+                });
+            }
+        } catch (e) {}
+
+        if (combinedOrders.length > 0) {
+            listEl.innerHTML = combinedOrders.map(o => {
+                let credHtml = "";
+                if (o.status === "PAID" && o.order_type === "ACCOUNT" && (o.delivered_login || o.delivered_password)) {
+                    const safeLogin = escapeJs(o.delivered_login || "");
+                    const safePass = escapeJs(o.delivered_password || "");
+                    credHtml = `
+                        <div style="background:#131b2e; padding:8px 10px; border-radius:8px; margin-top:8px; border:1px solid #10b981;">
+                            <div style="font-size:11px; color:#10b981; font-weight:bold; margin-bottom:4px;">🔐 ព័ត៌មានចូលគណនីហ្គេម៖</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span>📧 User: <b style="color:#fff;">${escapeHtml(o.delivered_login)}</b></span>
+                                <button class="copy-btn" onclick="copyRawText('${safeLogin}')">ចម្លង</button>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span>🔑 Pass: <b style="color:#fbbf24;">${escapeHtml(o.delivered_password)}</b></span>
+                                <button class="copy-btn" onclick="copyRawText('${safePass}')">ចម្លង</button>
+                            </div>
+                        </div>`;
+                }
+                return `
+                    <div class="history-item" style="border-left-color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                            <span>[${escapeHtml(o.game_name)}] ${escapeHtml(o.item_name)}</span>
+                            <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${o.status}</span>
+                        </div>
+                        <div style="color:#94a3b8; margin-top:4px;">តម្លៃ: $${parseFloat(o.amount).toFixed(2)} • ${escapeHtml(o.player_info)}</div>
+                        ${credHtml}
+                        <div style="color:#64748b; font-size:11px; margin-top:4px;">${o.bill_number} • ${o.created_at}</div>
+                    </div>`;
+            }).join("");
+        } else {
+            listEl.innerHTML = `<div style="color:#94a3b8; font-size:13px; padding:12px 0;">មិនទាន់មានប្រវត្តិការទិញនៅឡើយទេ។</div>`;
+        }
+    }
+
+    async function loadAdminOrders() {
+        if (!currentUser) return;
+        const container = document.getElementById("adminAllOrdersList");
+        container.innerHTML = `<div style="font-size:12px; color:#94a3b8;">កំពុងទាញយកទិន្នន័យ...</div>`;
+        try {
+            const res = await fetch(`${API_URL}/api/admin/orders`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tg_id: String(currentUser.id) })
+            });
+            const data = await res.json();
+            if (data.success && data.orders.length > 0) {
+                container.innerHTML = data.orders.map(o => `
+                    <div class="history-item" style="border-left-color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                            <span>${escapeHtml(o.game_name)} - ${escapeHtml(o.item_name)} ($${o.amount.toFixed(2)})</span>
+                            <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${o.status}</span>
+                        </div>
+                        <div style="color:#cbd5e1; margin-top:3px;">ព័ត៌មាន៖ <b>${escapeHtml(o.player_info)}</b></div>
+                        <div style="color:#94a3b8; margin-top:2px;">អ្នកទិញ៖ ${o.tg_username ? '@' + escapeHtml(o.tg_username) : escapeHtml(o.tg_name)}</div>
+                        <div style="color:#64748b; font-size:11px; margin-top:2px;">${o.bill_number} • ${o.created_at}</div>
+                    </div>
+                `).join("");
+            } else {
+                container.innerHTML = `<div style="font-size:12px; color:#94a3b8;">មិនទាន់មានការបញ្ជាទិញនៅឡើយទេ។</div>`;
+            }
+        } catch (e) {
+            container.innerHTML = `<div style="font-size:12px; color:#f43f5e;">មិនអាចទាញយកទិន្នន័យបានទេ!</div>`;
+        }
+    }
+
+    function logoutTelegram() {
+        currentUser = null;
+        localStorage.removeItem("kty_tg_user");
+        checkAuth();
+        closeModal("profileModal");
+    }
+
+    async function fetchStoreData() {
+        try {
+            const res = await fetch(`${API_URL}/api/store`);
+            const data = await res.json();
+            if (data && data.games) {
+                storeData = data;
+                renderBanners();
+                renderGames();
+                renderAccountsHome();
+                renderAdminLists();
+            }
+        } catch (e) {
+            document.getElementById("gamesGrid").innerHTML = `<div style="grid-column:span 3; text-align:center; color:#f43f5e; padding:20px;">⚠️ កំពុងភ្ជាប់ទៅ Server សូមរង់ចាំបន្តិច...</div>`;
+        }
+    }
+
+    async function saveStoreToServer() {
+        if (!currentUser) return;
+        try {
+            await fetch(`${API_URL}/api/store/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tg_id: String(currentUser.id),
+                    data: storeData
+                })
+            });
+            renderBanners();
+            renderGames();
+            renderAdminLists();
+        } catch (e) {
+            alert("មិនអាចរក្សាទុកទិន្នន័យបានទេ!");
+        }
+    }
+
+    function renderBanners() {
+        const slider = document.getElementById("bannerSlider");
+        const dots = document.getElementById("bannerDots");
+        slider.querySelectorAll("img").forEach(el => el.remove());
+        dots.innerHTML = "";
+
+        storeData.banners.forEach((url, idx) => {
+            const img = document.createElement("img");
+            img.src = url;
+            img.className = "banner-slide" + (idx === 0 ? " active" : "");
+            slider.insertBefore(img, dots);
+
+            const dot = document.createElement("div");
+            dot.className = "dot" + (idx === 0 ? " active" : "");
+            dot.onclick = () => showBanner(idx);
+            dots.appendChild(dot);
+        });
+        bannerIndex = 0;
+    }
+
+    function showBanner(idx) {
+        const slides = document.querySelectorAll(".banner-slide");
+        const dots = document.querySelectorAll(".dot");
+        if (!slides.length) return;
+        slides.forEach(s => s.classList.remove("active"));
+        dots.forEach(d => d.classList.remove("active"));
+        bannerIndex = idx % slides.length;
+        slides[bannerIndex].classList.add("active");
+        dots[bannerIndex].classList.add("active");
+    }
+
+    function nextBanner() {
+        if (storeData.banners.length > 1) showBanner(bannerIndex + 1);
+    }
+
+    function renderGames() {
+        const grid = document.getElementById("gamesGrid");
+        if (!storeData.games || storeData.games.length === 0) {
+            grid.innerHTML = `<div style="grid-column:span 3; text-align:center; color:#94a3b8; padding:24px; font-size:13px;">⏳ កំពុងផ្ទុកបញ្ជីហ្គេម...</div>`;
+            return;
+        }
+        grid.innerHTML = "";
+        storeData.games.forEach(game => {
+            const card = document.createElement("div");
+            card.className = "game-card";
+            card.innerHTML = `
+                <img src="${game.image || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'">
+                <div class="game-name">${escapeHtml(game.name)}</div>
+            `;
+            card.onclick = () => openGamePage(game);
+            grid.appendChild(card);
+        });
+    }
+
+    function renderAccountsHome() {
+        const sec = document.getElementById("accountsHomeSection");
+        const grid = document.getElementById("accountsGrid");
+        if (!storeData.accounts || storeData.accounts.length === 0) {
+            sec.style.display = "none";
+            return;
+        }
+        sec.style.display = "block";
+        grid.innerHTML = "";
+
+        storeData.accounts.forEach(acc => {
+            const thumbUrl = (acc.images && acc.images.length > 0) ? `${API_URL}/api/tg-image/${acc.images[0]}` : DEFAULT_GAME_ICON;
+            const photoCount = acc.images ? acc.images.length : 0;
+            const isOut = acc.stock <= 0;
+
+            const card = document.createElement("div");
+            card.className = "acc-card";
+            card.innerHTML = `
+                <div class="acc-thumb-wrap">
+                    <img src="${thumbUrl}" onerror="this.src='${DEFAULT_GAME_ICON}'">
+                    <span class="acc-game-badge">${escapeHtml(acc.game_name)}</span>
+                    ${photoCount > 1 ? `<span class="acc-photo-count">🖼️ ${photoCount} រូប</span>` : ''}
+                </div>
+                <div class="acc-body">
+                    <div class="acc-title">${escapeHtml(acc.title)}</div>
+                    <div class="acc-meta">
+                        <span class="acc-price">$${parseFloat(acc.price).toFixed(2)}</span>
+                        <span class="acc-stock ${isOut ? 'stock-out' : 'stock-in'}">${isOut ? 'អស់ស្តុក' : 'ស្តុក: ' + acc.stock}</span>
+                    </div>
+                </div>
+            `;
+            card.onclick = () => openAccountPage(acc);
+            grid.appendChild(card);
+        });
+    }
+
+    function switchAdminTab(tabId, btn) {
+        document.querySelectorAll(".admin-sec").forEach(s => s.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById(tabId).classList.add("active");
+        btn.classList.add("active");
+    }
+
+    function toggleInputConfig() {
+        document.getElementById("in1Config").style.display = document.getElementById("in1Enabled").checked ? "block" : "none";
+        document.getElementById("in2Config").style.display = document.getElementById("in2Enabled").checked ? "block" : "none";
+    }
+
+    function renderAdminLists() {
+        document.getElementById("adminBannerList").innerHTML = storeData.banners.map((url, idx) => `
+            <div class="list-row">
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">Banner #${idx+1}: ${escapeHtml(url)}</span>
+                <div class="row-actions">
+                    <button class="btn-edit" onclick="editBanner(${idx})">✏️ កែ</button>
+                    <button class="btn-danger" onclick="deleteBanner(${idx})">លុប</button>
+                </div>
+            </div>
+        `).join("");
+
+        const gList = document.getElementById("adminGameList");
+        const gSelect = document.getElementById("itemGameSelect");
+        const prevSelectedGame = gSelect.value;
+        gList.innerHTML = "";
+        gSelect.innerHTML = "";
+
+        storeData.games.forEach(g => {
+            gList.innerHTML += `
+                <div class="list-row">
+                    <span>🎮 ${escapeHtml(g.name)}</span>
+                    <div class="row-actions">
+                        <button class="btn-edit" onclick="editGame('${g.id}')">✏️ កែ</button>
+                        <button class="btn-danger" onclick="deleteGame('${g.id}')">លុប</button>
+                    </div>
+                </div>`;
+            gSelect.innerHTML += `<option value="${g.id}">${escapeHtml(g.name)}</option>`;
+        });
+        if (prevSelectedGame) gSelect.value = prevSelectedGame;
+
+        document.getElementById("adminItemList").innerHTML = storeData.items.map(item => {
+            const g = storeData.games.find(x => x.id === item.game_id);
+            return `
+                <div class="list-row">
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">[${g ? escapeHtml(g.name) : "Game"}] ${escapeHtml(item.name)} - $${item.price}</span>
+                    <div class="row-actions">
+                        <button class="btn-edit" onclick="editItem('${item.id}')">✏️ កែ</button>
+                        <button class="btn-danger" onclick="deleteItem('${item.id}')">លុប</button>
+                    </div>
+                </div>`;
+        }).join("");
+    }
+
+    async function handleAccPhotoUpload(input) {
+        if (!currentUser) return;
+        const files = Array.from(input.files);
+        if (!files.length) return;
+
+        const remaining = 10 - uploadedAccImages.length;
+        if (remaining <= 0) {
+            alert("អ្នកបានបញ្ចូលគ្រប់ ១០ រូបហើយ!");
+            input.value = "";
+            return;
+        }
+
+        const toUpload = files.slice(0, remaining);
+        const progEl = document.getElementById("uploadProgressText");
+
+        for (let i = 0; i < toUpload.length; i++) {
+            progEl.innerText = `⏳ កំពុងផ្ញើរូបទី ${i + 1}/${toUpload.length} ទៅ Telegram Cloud...`;
+            const formData = new FormData();
+            formData.append("tg_id", String(currentUser.id));
+            formData.append("photo", toUpload[i]);
+
+            try {
+                const res = await fetch(`${API_URL}/api/upload-tg-image`, { method: "POST", body: formData });
+                const data = await res.json();
+                if (data.success && data.file_id) {
+                    uploadedAccImages.push(data.file_id);
+                    renderUploadedAccPhotos();
+                } else {
+                    alert("Upload បរាជ័យ៖ " + (data.error || "Unknown error"));
+                }
+            } catch (e) {
+                alert("មិនអាចភ្ជាប់ទៅ Server ដើម្បី Upload រូបបានទេ!");
+            }
+        }
+        progEl.innerText = `✅ បានផ្ទុករូបភាពសរុប ${uploadedAccImages.length}/10 លើ Telegram`;
+        input.value = "";
+    }
+
+    function renderUploadedAccPhotos() {
+        const container = document.getElementById("accPhotoPreview");
+        container.innerHTML = uploadedAccImages.map((fid, idx) => `
+            <div class="preview-item">
+                <img src="${API_URL}/api/tg-image/${fid}">
+                <button class="preview-del" onclick="removeUploadedAccPhoto(${idx})">×</button>
+            </div>
+        `).join("");
+    }
+
+    function removeUploadedAccPhoto(idx) {
+        uploadedAccImages.splice(idx, 1);
+        renderUploadedAccPhotos();
+        document.getElementById("uploadProgressText").innerText = `រូបភាពបច្ចុប្បន្ន៖ ${uploadedAccImages.length}/10`;
+    }
+
+    async function loadAdminAccounts() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${API_URL}/api/admin/accounts`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tg_id: String(currentUser.id) })
+            });
+            const data = await res.json();
+            if (data.success) {
+                adminAccountsCache = data.accounts;
+                document.getElementById("adminAccList").innerHTML = adminAccountsCache.map(a => `
+                    <div class="list-row">
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">
+                            [${escapeHtml(a.game_name)}] ${escapeHtml(a.title)} ($${a.price} | ស្តុក:${a.stock})
+                        </span>
+                        <div class="row-actions">
+                            <button class="btn-edit" onclick="editAccountPost('${a.id}')">✏️ កែ</button>
+                            <button class="btn-danger" onclick="deleteAccountPost('${a.id}')">លុប</button>
+                        </div>
+                    </div>
+                `).join("");
+            }
+        } catch (e) {}
+    }
+
+    function editAccountPost(accId) {
+        const a = adminAccountsCache.find(x => x.id === accId);
+        if (!a) return;
+        editingAccountId = accId;
+
+        document.getElementById("accGameName").value = a.game_name || "";
+        document.getElementById("accTitle").value = a.title || "";
+        document.getElementById("accPrice").value = a.price || "";
+        document.getElementById("accStock").value = a.stock ?? 1;
+        document.getElementById("accDesc").value = a.description || "";
+        document.getElementById("accLogin").value = a.acc_login || "";
+        document.getElementById("accPassword").value = a.acc_password || "";
+        uploadedAccImages = [...(a.images || [])];
+        renderUploadedAccPhotos();
+
+        document.getElementById("accEditBanner").style.display = "block";
+        document.getElementById("accSaveBtn").innerText = "💾 រក្សាទុកការកែប្រែគណនី";
+        document.getElementById("accCancelBtn").style.display = "inline-block";
+        document.getElementById("accTitle").focus();
+    }
+
+    function cancelEditAccount() {
+        editingAccountId = null;
+        document.getElementById("accGameName").value = "";
+        document.getElementById("accTitle").value = "";
+        document.getElementById("accPrice").value = "";
+        document.getElementById("accStock").value = "1";
+        document.getElementById("accDesc").value = "";
+        document.getElementById("accLogin").value = "";
+        document.getElementById("accPassword").value = "";
+        uploadedAccImages = [];
+        renderUploadedAccPhotos();
+        document.getElementById("uploadProgressText").innerText = "";
+
+        document.getElementById("accEditBanner").style.display = "none";
+        document.getElementById("accSaveBtn").innerText = "+ បង្ហោះលក់គណនី";
+        document.getElementById("accCancelBtn").style.display = "none";
+    }
+
+    async function saveAccountPost() {
+        if (!currentUser) return;
+        const gameName = document.getElementById("accGameName").value.trim();
+        const title = document.getElementById("accTitle").value.trim();
+        const price = parseFloat(document.getElementById("accPrice").value);
+        const stock = parseInt(document.getElementById("accStock").value || "1");
+        const desc = document.getElementById("accDesc").value.trim();
+        const login = document.getElementById("accLogin").value.trim();
+        const pass = document.getElementById("accPassword").value.trim();
+
+        if (!gameName || !title || isNaN(price) || price <= 0 || !login || !pass) {
+            return alert("សូមបំពេញឈ្មោះហ្គេម ឈ្មោះគណនី តម្លៃ Gmail/Username និង Password ឱ្យបានគ្រប់គ្រាន់!");
+        }
+
+        const btn = document.getElementById("accSaveBtn");
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_URL}/api/admin/account/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tg_id: String(currentUser.id),
+                    account: {
+                        id: editingAccountId,
+                        game_name: gameName,
+                        title: title,
+                        price: price,
+                        stock: stock,
+                        description: desc,
+                        acc_login: login,
+                        acc_password: pass,
+                        images: uploadedAccImages
+                    }
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                cancelEditAccount();
+                await fetchStoreData();
+                await loadAdminAccounts();
+            } else {
+                alert(data.error);
+            }
+        } catch (e) {
+            alert("មិនអាចរក្សាទុកគណនីបានទេ!");
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function deleteAccountPost(accId) {
+        if (!currentUser) return;
+        if (editingAccountId === accId) cancelEditAccount();
+        try {
+            await fetch(`${API_URL}/api/admin/account/delete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tg_id: String(currentUser.id), acc_id: accId })
+            });
+            await fetchStoreData();
+            await loadAdminAccounts();
+        } catch (e) {}
+    }
+
+    function editBanner(idx) {
+        editingBannerIndex = idx;
+        document.getElementById("newBannerUrl").value = storeData.banners[idx];
+        document.getElementById("bannerFormLabel").innerText = `✏️ កែសម្រួល Banner #${idx + 1}`;
+        document.getElementById("bannerSaveBtn").innerText = "រក្សាទុក";
+        document.getElementById("bannerCancelBtn").style.display = "inline-block";
+    }
+    function cancelEditBanner() {
+        editingBannerIndex = null;
+        document.getElementById("newBannerUrl").value = "";
+        document.getElementById("bannerFormLabel").innerText = "ដាក់ Link រូបភាព Banner (ទំហំ 16:9)";
+        document.getElementById("bannerSaveBtn").innerText = "បន្ថែម";
+        document.getElementById("bannerCancelBtn").style.display = "none";
+    }
+    function saveBanner() {
+        const url = document.getElementById("newBannerUrl").value.trim();
+        if (!url) return;
+        if (editingBannerIndex !== null) { storeData.banners[editingBannerIndex] = url; cancelEditBanner(); }
+        else { storeData.banners.push(url); document.getElementById("newBannerUrl").value = ""; }
+        saveStoreToServer();
+    }
+    function deleteBanner(idx) {
+        if (editingBannerIndex === idx) cancelEditBanner();
+        storeData.banners.splice(idx, 1);
+        saveStoreToServer();
+    }
+
+    function editGame(gameId) {
+        const g = storeData.games.find(x => x.id === gameId);
+        if (!g) return;
+        editingGameId = gameId;
+        document.getElementById("newGameName").value = g.name || "";
+        document.getElementById("newGameImg").value = g.image || "";
+        document.getElementById("in1Enabled").checked = !!g.input1_enabled;
+        document.getElementById("in1Label").value = g.input1_label || "";
+        document.getElementById("in1Placeholder").value = g.input1_placeholder || "";
+        document.getElementById("in2Enabled").checked = !!g.input2_enabled;
+        document.getElementById("in2Label").value = g.input2_label || "";
+        document.getElementById("in2Placeholder").value = g.input2_placeholder || "";
+        document.getElementById("inNote").value = g.input_note || "";
+        toggleInputConfig();
+        document.getElementById("gameEditBanner").style.display = "block";
+        document.getElementById("gameSaveBtn").innerText = "💾 រក្សាទុកការកែប្រែហ្គេម";
+        document.getElementById("gameCancelBtn").style.display = "inline-block";
+    }
+    function cancelEditGame() {
+        editingGameId = null;
+        document.getElementById("newGameName").value = "";
+        document.getElementById("newGameImg").value = "";
+        document.getElementById("in1Enabled").checked = true;
+        document.getElementById("in1Label").value = "";
+        document.getElementById("in1Placeholder").value = "";
+        document.getElementById("in2Enabled").checked = false;
+        document.getElementById("in2Label").value = "";
+        document.getElementById("in2Placeholder").value = "";
+        document.getElementById("inNote").value = "";
+        toggleInputConfig();
+        document.getElementById("gameEditBanner").style.display = "none";
+        document.getElementById("gameSaveBtn").innerText = "+ បង្ហោះហ្គេមថ្មី";
+        document.getElementById("gameCancelBtn").style.display = "none";
+    }
+    function saveGame() {
+        const name = document.getElementById("newGameName").value.trim();
+        const img = document.getElementById("newGameImg").value.trim();
+        if (!name) return alert("សូមបញ្ចូលឈ្មោះហ្គេម!");
+        const gameObj = {
+            id: editingGameId || ("game_" + Date.now()),
+            name: name,
+            image: img || DEFAULT_GAME_ICON,
+            input1_enabled: document.getElementById("in1Enabled").checked,
+            input1_label: document.getElementById("in1Label").value.trim() || "Username / ID",
+            input1_placeholder: document.getElementById("in1Placeholder").value.trim(),
+            input2_enabled: document.getElementById("in2Enabled").checked,
+            input2_label: document.getElementById("in2Label").value.trim() || "Server ID",
+            input2_placeholder: document.getElementById("in2Placeholder").value.trim(),
+            input_note: document.getElementById("inNote").value.trim()
+        };
+        if (editingGameId) {
+            const idx = storeData.games.findIndex(x => x.id === editingGameId);
+            if (idx !== -1) storeData.games[idx] = gameObj;
+        } else {
+            storeData.games.push(gameObj);
+        }
+        cancelEditGame();
+        saveStoreToServer();
+    }
+    function deleteGame(gameId) {
+        if (editingGameId === gameId) cancelEditGame();
+        storeData.games = storeData.games.filter(g => g.id !== gameId);
+        storeData.items = storeData.items.filter(i => i.game_id !== gameId);
+        saveStoreToServer();
+    }
+
+    function editItem(itemId) {
+        const item = storeData.items.find(x => x.id === itemId);
+        if (!item) return;
+        editingItemId = itemId;
+        document.getElementById("itemGameSelect").value = item.game_id;
+        document.getElementById("newItemName").value = item.name || "";
+        document.getElementById("newItemPrice").value = item.price || "";
+        document.getElementById("newItemImg").value = item.image || "";
+        document.getElementById("itemEditBanner").style.display = "block";
+        document.getElementById("itemSaveBtn").innerText = "💾 រក្សាទុកការកែប្រែ Item";
+        document.getElementById("itemCancelBtn").style.display = "inline-block";
+    }
+    function cancelEditItem() {
+        editingItemId = null;
+        document.getElementById("newItemName").value = "";
+        document.getElementById("newItemPrice").value = "";
+        document.getElementById("newItemImg").value = "";
+        document.getElementById("itemEditBanner").style.display = "none";
+        document.getElementById("itemSaveBtn").innerText = "+ បង្ហោះកញ្ចប់ Item";
+        document.getElementById("itemCancelBtn").style.display = "none";
+    }
+    function saveItem() {
+        const gameId = document.getElementById("itemGameSelect").value;
+        const name = document.getElementById("newItemName").value.trim();
+        const price = parseFloat(document.getElementById("newItemPrice").value);
+        const img = document.getElementById("newItemImg").value.trim();
+        if (!gameId || !name || isNaN(price) || price <= 0) return alert("សូមបំពេញឈ្មោះកញ្ចប់ និងតម្លៃឱ្យបានត្រឹមត្រូវ!");
+        const itemObj = {
+            id: editingItemId || ("item_" + Date.now()),
+            game_id: gameId,
+            name: name,
+            price: price,
+            image: img || DEFAULT_ITEM_ICON
+        };
+        if (editingItemId) {
+            const idx = storeData.items.findIndex(x => x.id === editingItemId);
+            if (idx !== -1) storeData.items[idx] = itemObj;
+        } else {
+            storeData.items.push(itemObj);
+        }
+        cancelEditItem();
+        saveStoreToServer();
+    }
+    function deleteItem(itemId) {
+        if (editingItemId === itemId) cancelEditItem();
+        storeData.items = storeData.items.filter(i => i.id !== itemId);
+        saveStoreToServer();
+    }
+
+    async function createItemOrder() {
+        const errEl = document.getElementById("orderError");
+        if (!selectedGame || !selectedItem) {
+            errEl.innerText = "⚠️ សូមជ្រើសរើសកញ្ចប់ Item ជាមុនសិន!";
+            return;
+        }
+
+        let pInfo = [];
+        if (selectedGame.input1_enabled) {
+            const v1 = document.getElementById("custInput1").value.trim();
+            if (!v1) { errEl.innerText = `⚠️ សូមបញ្ចូល ${selectedGame.input1_label}!`; return; }
+            pInfo.push(v1);
+        }
+        if (selectedGame.input2_enabled) {
+            const v2 = document.getElementById("custInput2").value.trim();
+            if (!v2) { errEl.innerText = `⚠️ សូមបញ្ចូល ${selectedGame.input2_label}!`; return; }
+            pInfo.push(`(${v2})`);
+        }
+
+        errEl.innerText = "";
+        const payBtn = document.getElementById("payBtn");
+        payBtn.disabled = true;
+        payBtn.innerText = "កំពុងបង្កើត KHQR ថ្មី...";
+
+        try {
+            const res = await fetch(`${API_URL}/api/create-order`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    order_type: "ITEM",
+                    tg_id: currentUser ? String(currentUser.id) : "",
+                    tg_username: currentUser ? (currentUser.username || "") : "",
+                    tg_name: currentUser ? (currentUser.first_name || "") : "",
+                    game_name: selectedGame.name,
+                    item_name: selectedItem.name,
+                    player_info: pInfo.join(" "),
+                    price: selectedItem.price
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                openQrPaymentModal(data, `${selectedGame.name} - ${selectedItem.name} | ID: ${pInfo.join(" ")}`);
+            } else {
+                errEl.innerText = data.error;
+            }
+        } catch (e) {
+            errEl.innerText = "មិនអាចភ្ជាប់ទៅ Server បានទេ!";
+        } finally {
+            payBtn.disabled = false;
+            payBtn.innerText = "ទូទាត់ប្រាក់តាម KHQR";
+        }
+    }
+
+    async function createAccountOrder() {
+        if (!selectedAccount) return;
+        const errEl = document.getElementById("accOrderError");
+        const buyBtn = document.getElementById("buyAccBtn");
+
+        errEl.innerText = "";
+        buyBtn.disabled = true;
+        buyBtn.innerText = "កំពុងបង្កើត KHQR ថ្មី...";
+
+        try {
+            const res = await fetch(`${API_URL}/api/create-order`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    order_type: "ACCOUNT",
+                    account_id: selectedAccount.id,
+                    tg_id: currentUser ? String(currentUser.id) : "",
+                    tg_username: currentUser ? (currentUser.username || "") : "",
+                    tg_name: currentUser ? (currentUser.first_name || "") : ""
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                openQrPaymentModal(data, `ទិញគណនី៖ ${selectedAccount.title}`);
+            } else {
+                errEl.innerText = data.error;
+            }
+        } catch (e) {
+            errEl.innerText = "មិនអាចភ្ជាប់ទៅ Server បានទេ!";
+        } finally {
+            buyBtn.disabled = false;
+            buyBtn.innerText = `ទិញគណនីនេះឥឡូវនេះ ($${parseFloat(selectedAccount.price).toFixed(2)})`;
+        }
+    }
+
+    function openQrPaymentModal(data, descText) {
+        currentMD5 = data.md5;
+        document.getElementById("qrOrderDesc").innerText = descText;
+        document.getElementById("qrAmountText").innerText = `$${data.amount.toFixed(2)}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(data.qr_string)}`;
+        document.getElementById("qrImgHolder").innerHTML = `<img src="${qrUrl}" style="width:185px; height:185px;">`;
+
+        document.getElementById("qrView").style.display = "block";
+        document.getElementById("expiredView").style.display = "none";
+        document.getElementById("thankYouView").style.display = "none";
+        document.getElementById("qrModal").style.display = "flex";
+
+        startQrCountdown(data.expires_in || 300);
+        startAutoPaymentCheck();
+    }
+
+    function startQrCountdown(seconds) {
+        if (countdownTimer) clearInterval(countdownTimer);
+        let left = seconds;
+        const el = document.getElementById("qrCountdownText");
+
+        countdownTimer = setInterval(() => {
+            left--;
+            if (left <= 0) {
+                clearInterval(countdownTimer);
+                clearInterval(pollingTimer);
+                currentMD5 = "";
+                document.getElementById("qrImgHolder").innerHTML = "";
+                document.getElementById("qrView").style.display = "none";
+                document.getElementById("expiredView").style.display = "block";
+                return;
+            }
+            const m = String(Math.floor(left / 60)).padStart(2, '0');
+            const s = String(left % 60).padStart(2, '0');
+            el.innerText = `សុពលភាពប្រើបានតែម្តង៖ ${m}:${s}`;
+        }, 1000);
+    }
+
+    function startAutoPaymentCheck() {
+        if (pollingTimer) clearInterval(pollingTimer);
+        pollingTimer = setInterval(async () => {
+            if (!currentMD5) return;
+            try {
+                const res = await fetch(`${API_URL}/api/check-payment`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ md5: currentMD5 })
+                });
+                const data = await res.json();
+
+                if (data.status === "PAID" && data.order) {
+                    clearInterval(pollingTimer);
+                    clearInterval(countdownTimer);
+                    pollingTimer = null;
+                    currentMD5 = "";
+                    document.getElementById("qrImgHolder").innerHTML = "";
+
+                    saveOrderLocally(data.order);
+                    showThankYouScreen(data.order);
+                    fetchStoreData();
+                    if (isAdminUser()) {
+                        loadAdminOrders();
+                        loadAdminAccounts();
+                    }
+                } else if (data.status === "EXPIRED") {
+                    clearInterval(pollingTimer);
+                    clearInterval(countdownTimer);
+                    currentMD5 = "";
+                    document.getElementById("qrImgHolder").innerHTML = "";
+                    document.getElementById("qrView").style.display = "none";
+                    document.getElementById("expiredView").style.display = "block";
+                }
+            } catch (e) {}
+        }, 3500);
+    }
+
+    function showThankYouScreen(order) {
+        document.getElementById("recBill").innerText = order.bill_number;
+        document.getElementById("recGame").innerText = order.game_name;
+        document.getElementById("recItem").innerText = order.item_name;
+        document.getElementById("recAmount").innerText = `$${parseFloat(order.amount).toFixed(2)} (PAID)`;
+
+        const credBox = document.getElementById("deliveredAccountBox");
+        const playerRow = document.getElementById("recPlayerRow");
+        const subText = document.getElementById("thankYouSubText");
+
+        if (order.order_type === "ACCOUNT" && order.delivered_login) {
+            credBox.style.display = "block";
+            playerRow.style.display = "none";
+            document.getElementById("delivLogin").innerText = order.delivered_login;
+            document.getElementById("delivPass").innerText = order.delivered_password;
+            subText.innerHTML = "សូមអរគុណ! ព័ត៌មានគណនីហ្គេមរបស់អ្នកត្រូវបានរក្សាទុកក្នុង <b>ប្រវត្តិការទិញ</b> រួចរាល់ហើយ៖";
+        } else {
+            credBox.style.display = "none";
+            playerRow.style.display = "flex";
+            document.getElementById("recPlayer").innerText = order.player_info;
+            subText.innerHTML = "សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY TOPUP STORE</b>។ ប្រព័ន្ធបានបញ្ជូនព័ត៌មានទៅក្រុមការងារដើម្បីដំណើរការជូនអ្នកភ្លាមៗ!";
+        }
+
+        document.getElementById("qrView").style.display = "none";
+        document.getElementById("thankYouView").style.display = "block";
+    }
+
+    function copyRawText(text) {
+        navigator.clipboard.writeText(text);
+        alert("បានចម្លង៖ " + text);
+    }
+
+    function closeQrModal() {
+        if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        currentMD5 = "";
+        document.getElementById("qrImgHolder").innerHTML = "";
+        document.getElementById("qrModal").style.display = "none";
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = "none";
+    }
+</script>
+
+</body>
+</html>
