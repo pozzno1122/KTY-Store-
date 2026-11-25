@@ -12,13 +12,14 @@ import os
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Bakong Token ថ្មី (មានសុពលភាពដល់ 31 Dec 2026) & គណនី ABA ទទួលប្រាក់ផ្ទាល់
+# Bakong Token & គណនី ABA ទទួលប្រាក់ផ្ទាល់
 BAKONG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYTYwNGFhZjliNmRlNGMzNyJ9LCJpYXQiOjE3OTA5ODA1MzgsImV4cCI6MTc5ODc1NjUzOH0.JVGnd51f_4MWB3nUu_OwtEmeo9FjJgy9BypFytO053I"
 ABA_ROUTING_ID = "abaakhppxxx@abaa"
 ABA_ACCOUNT_NO = "010765908"
 ABA_MERCHANT_DISPLAY_NAME = "KTY STORE"
 
-TG_BOT_TOKEN = "8681603461:AAHTBdVpAVAMxaDF7pZfiSwn9SPrN6w7kqM"
+# Telegram Bot ថ្មី & Group ID
+TG_BOT_TOKEN = "9286576815:AAGW1VCYg8uZDqvGj5zATrnFaUjwghJpmqc"
 TG_GROUP_ID = "-1005852775918"
 ADMIN_USERNAME = "ktyofficial169"
 
@@ -62,7 +63,6 @@ def build_aba_khqr(amount_usd: float, bill_no: str, nonce: str) -> str:
         terminal_label=f"T-{nonce}",
         static=False
     )
-    # បញ្ចូលលេខគណនី ABA 010765908 ទៅក្នុង Tag 29 ឱ្យត្រូវតាមស្តង់ដារធនាគារ ABA
     base_tag29 = f"29{len(ABA_ROUTING_ID)+4:02d}00{len(ABA_ROUTING_ID):02d}{ABA_ROUTING_ID}"
     aba_subtags = (
         f"00{len(ABA_ROUTING_ID):02d}{ABA_ROUTING_ID}"
@@ -77,7 +77,6 @@ def build_aba_khqr(amount_usd: float, bill_no: str, nonce: str) -> str:
         return qr_body + crc16_ccitt(qr_body)
     return raw_qr
 
-# ==================== ទាញយកទិន្នន័យចាស់ដែលអ្នកបានរៀបចំរួចរាល់ ====================
 def load_initial_from_telegram_pinned():
     try:
         res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=8).json()
@@ -154,7 +153,6 @@ def verify_telegram_auth(auth_data):
 def home():
     return send_file(os.path.join(BASE_DIR, 'index.html'))
 
-# ==================== API ពិនិត្យឈ្មោះ និងរូបភាព Avatar របស់គណនី Roblox ====================
 @app.route('/api/roblox/lookup', methods=['POST'])
 def roblox_lookup():
     payload = request.get_json(silent=True) or {}
@@ -202,7 +200,6 @@ def roblox_lookup():
     except Exception:
         return jsonify({"success": False, "error": "មិនអាចភ្ជាប់ទៅ Roblox API បានទេ សូមព្យាយាមម្តងទៀត!"}), 500
 
-# ==================== API ពិនិត្យឈ្មោះគណនី MLBB & Free Fire ====================
 @app.route('/api/game/lookup', methods=['POST'])
 def game_lookup():
     payload = request.get_json(silent=True) or {}
@@ -291,7 +288,6 @@ def serve_tg_image(file_id):
     except Exception as e:
         return str(e), 500
 
-# ==================== ប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Text Only) ====================
 @app.route('/api/chat/send', methods=['POST'])
 def chat_send():
     payload = request.get_json(silent=True) or {}
@@ -424,7 +420,6 @@ def chat_admin_overview():
         "total_unread": total_unread
     })
 
-# ==================== ការគ្រប់គ្រងគណនីហ្គេម & ការទូទាត់ KHQR ចូល ABA ====================
 @app.route('/api/admin/accounts', methods=['POST'])
 def get_admin_accounts():
     d = load_data()
