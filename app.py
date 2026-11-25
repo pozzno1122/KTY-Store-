@@ -509,12 +509,16 @@ def create_order():
         md5_hash = khqr.generate_md5(qr_string)
 
         # បង្កើត Deep Link សម្រាប់បើក ABA Mobile ដោយស្វ័យប្រវត្តិ
-        aba_deeplink = khqr.generate_deeplink(
-            qr_string,
-            callback="https://ktytes.netlify.app",
-            appIconUrl="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png",
-            appName="KTY STORE"
-        )
+        aba_deeplink = ""
+        try:
+            aba_deeplink = khqr.generate_deeplink(
+                qr_string,
+                callback="https://ktytes.netlify.app",
+                appIconUrl="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png",
+                appName="KTY STORE"
+            )
+        except Exception as dl_err:
+            print("Deeplink note:", dl_err)
 
         order_record = {
             "bill_number": bill_no,
@@ -552,11 +556,34 @@ def create_order():
 def check_payment():
     data = request.get_json(silent=True) or {}
     md5_hash = data.get("md5")
+    fallback_order = data.get("order_info") or {}
     if not md5_hash:
         return jsonify({"success": False, "error": "Missing MD5"}), 400
 
     d = load_data()
     order = next((o for o in d["orders"] if o["md5"] == md5_hash), None)
+
+    # ប្រសិនបើ Server ទើប Restart ហើយបាត់ Order ពី Memory ឱ្យទាញពី fallback_order មកប្រើភ្លាម
+    if not order and fallback_order:
+        order = {
+            "bill_number": fallback_order.get("bill_number", f"KTY-{int(time.time())}"),
+            "md5": md5_hash,
+            "order_type": fallback_order.get("order_type", "ITEM"),
+            "account_id": fallback_order.get("account_id", ""),
+            "tg_id": fallback_order.get("tg_id", "GUEST"),
+            "tg_username": fallback_order.get("tg_username", ""),
+            "tg_name": fallback_order.get("tg_name", "ភ្ញៀវទូទៅ (Guest)"),
+            "game_name": fallback_order.get("game_name", "Game"),
+            "item_name": fallback_order.get("item_name", "Item"),
+            "player_info": fallback_order.get("player_info", ""),
+            "amount": float(fallback_order.get("amount", 0)),
+            "status": "PENDING",
+            "used": False,
+            "created_ts": time.time(),
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        d["orders"].append(order)
+
     if not order:
         return jsonify({"success": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
 
@@ -622,6 +649,7 @@ def check_payment():
 
         return jsonify({"success": True, "status": status})
     except Exception as e:
+        print("Check Payment Error:", e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
