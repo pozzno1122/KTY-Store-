@@ -16,7 +16,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 BAKONG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYTYwNGFhZjliNmRlNGMzNyJ9LCJpYXQiOjE3OTA5ODA1MzgsImV4cCI6MTc5ODc1NjUzOH0.JVGnd51f_4MWB3nUu_OwtEmeo9FjJgy9BypFytO053I"
 ABA_ROUTING_ID = "abaakhppxxx@abaa"
 ABA_ACCOUNT_NO = "010765908"
-ABA_ACCOUNT_NAME = "BROSNO PHON"
+ABA_MERCHANT_DISPLAY_NAME = "KTY STORE"
 
 TG_BOT_TOKEN = "8681603461:AAHTBdVpAVAMxaDF7pZfiSwn9SPrN6w7kqM"
 TG_GROUP_ID = "-1005852775918"
@@ -49,10 +49,10 @@ def crc16_ccitt(data: str) -> str:
     return f"{crc:04X}"
 
 def build_aba_khqr(amount_usd: float, bill_no: str, nonce: str) -> str:
-    """បង្កើត KHQR បាញ់ប្រាក់ចូលគណនី ABA (010765908 - BROSNO PHON) ដោយផ្ទាល់"""
+    """បង្កើត KHQR បាញ់ប្រាក់ចូលគណនី ABA (010765908) ដោយបង្ហាញឈ្មោះ KTY STORE"""
     raw_qr = khqr.create_qr(
         account_id=ABA_ROUTING_ID,
-        merchant_name=ABA_ACCOUNT_NAME,
+        merchant_name=ABA_MERCHANT_DISPLAY_NAME,
         merchant_city="Phnom Penh",
         amount=round(amount_usd, 2),
         currency="USD",
@@ -570,18 +570,6 @@ def create_order():
         qr_string = build_aba_khqr(price_usd, bill_no, unique_nonce)
         md5_hash = khqr.generate_md5(qr_string)
 
-        # បង្កើត Deep Link សម្រាប់បើក ABA Mobile ដោយស្វ័យប្រវត្តិ
-        aba_deeplink = ""
-        try:
-            aba_deeplink = khqr.generate_deeplink(
-                qr_string,
-                callback="https://ktytes.netlify.app",
-                appIconUrl="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png",
-                appName="KTY STORE"
-            )
-        except Exception as dl_err:
-            print("Deeplink note:", dl_err)
-
         order_record = {
             "bill_number": bill_no,
             "md5": md5_hash,
@@ -605,7 +593,6 @@ def create_order():
         return jsonify({
             "success": True,
             "qr_string": qr_string,
-            "aba_deeplink": aba_deeplink,
             "md5": md5_hash,
             "amount": round(price_usd, 2),
             "bill_number": bill_no,
