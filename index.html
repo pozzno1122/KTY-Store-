@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KTY TOPUP STORE - ហាងបញ្ចូលកញ្ចប់ហ្គេម និងលក់គណនី</title>
+    <title>KTY STORE - ហាងលក់ Account Roblox, Robux និង Top-up ហ្គេម</title>
     <link rel="icon" type="image/png" href="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11,14 +11,16 @@
             font-family: sans-serif;
             background: #090d16;
             color: #f8fafc;
-            padding-bottom: 95px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         /* Navbar */
         .navbar {
             background: rgba(17, 24, 39, 0.95);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid #1f2937;
-            padding: 12px 20px;
+            padding: 10px 16px;
             position: sticky;
             top: 0;
             z-index: 50;
@@ -35,35 +37,42 @@
             align-items: center;
             gap: 10px;
             font-weight: 800;
-            font-size: 19px;
+            font-size: 18px;
             color: #38bdf8;
             cursor: pointer;
         }
         .brand img {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 10px;
             object-fit: cover;
             background: #1e293b;
             border: 1px solid #334155;
         }
         .tg-btn {
-            background: #54a9eb;
+            background: #0284c7;
             color: #fff;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 13px;
+            border: 1px solid #38bdf8;
+            padding: 6px 13px;
+            border-radius: 16px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
+            transition: background 0.15s;
         }
-        .tg-btn img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+        .tg-btn:hover { background: #0369a1; }
+        .tg-btn img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
 
-        /* Responsive Container */
-        .container { max-width: 1120px; margin: 0 auto; padding: 18px 16px; }
+        .container {
+            max-width: 1120px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 18px 16px 32px;
+            flex: 1;
+        }
 
         .page-view { animation: fadeIn 0.25s ease-out; }
         @keyframes fadeIn {
@@ -213,7 +222,7 @@
             gap: 16px;
         }
         @media (min-width: 820px) {
-            .detail-layout { grid-template-columns: 360px 1fr; align-items: start; }
+            .detail-layout { grid-template-columns: 380px 1fr; align-items: start; }
         }
 
         .acc-gallery {
@@ -287,6 +296,40 @@
         input:focus { border-color: #38bdf8; }
         .note-text { font-size: 12px; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 10px; margin-top: 8px; line-height: 1.4; }
 
+        /* កាតបង្ហាញប្រវត្តិរូប Avatar & ឈ្មោះគណនី Roblox */
+        .roblox-profile-card {
+            display: none;
+            margin-top: 10px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid #10b981;
+            border-radius: 12px;
+            padding: 10px 12px;
+            align-items: center;
+            gap: 12px;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .roblox-profile-card img {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #090d16;
+            border: 2px solid #10b981;
+            flex-shrink: 0;
+        }
+        .roblox-check-btn {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 0 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .roblox-check-btn:hover { background: #0369a1; }
+
         .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 768px) {
             .items-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -340,7 +383,37 @@
         .preview-item img { width: 100%; height: 100%; object-fit: cover; }
         .preview-del { position: absolute; top: 2px; right: 2px; background: #ef4444; color: #fff; border: none; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; cursor: pointer; }
 
-        /* ==================== ប៊ូតុងឆាតនៅជ្រុងខាងក្រោមឆ្វេងដៃ ==================== */
+        /* Footer */
+        .site-footer {
+            background: #0d1322;
+            border-top: 1px solid #1e293b;
+            padding: 32px 16px 85px;
+            margin-top: auto;
+            color: #94a3b8;
+        }
+        .footer-inner { max-width: 1120px; margin: 0 auto; }
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #1e293b;
+        }
+        @media (min-width: 768px) {
+            .footer-grid { grid-template-columns: 2fr 1fr 1.2fr 1fr; gap: 28px; }
+        }
+        .footer-brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 800; font-size: 17px; margin-bottom: 10px; }
+        .footer-brand img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+        .footer-desc { font-size: 13px; line-height: 1.6; color: #cbd5e1; }
+        .footer-col h4 { color: #fff; font-size: 14px; font-weight: bold; margin-bottom: 12px; }
+        .footer-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .footer-links li a, .footer-links li span { color: #94a3b8; text-decoration: none; font-size: 13px; cursor: pointer; transition: color 0.15s; }
+        .footer-links li a:hover, .footer-links li span:hover { color: #38bdf8; }
+        .khqr-badge { display: inline-flex; align-items: center; gap: 8px; background: #131b2e; border: 1px solid #334155; padding: 8px 14px; border-radius: 10px; color: #fff; font-weight: bold; font-size: 13px; }
+        .khqr-tag { background: #e11d48; color: #fff; padding: 2px 7px; border-radius: 5px; font-size: 11px; font-weight: 800; }
+        .footer-bottom { padding-top: 18px; text-align: center; font-size: 12px; color: #64748b; }
+
+        /* Floating Chat Button */
         .floating-chat-btn {
             position: fixed;
             bottom: 18px;
@@ -349,9 +422,9 @@
             background: linear-gradient(135deg, #0284c7, #2563eb);
             color: #fff;
             border: 2px solid #38bdf8;
-            padding: 12px 18px;
+            padding: 11px 16px;
             border-radius: 30px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
@@ -361,17 +434,9 @@
             transition: transform 0.15s;
         }
         .floating-chat-btn:active { transform: scale(0.95); }
-        .chat-badge {
-            background: #ef4444;
-            color: #fff;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 2px 7px;
-            border-radius: 12px;
-            display: none;
-        }
+        .chat-badge { background: #ef4444; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 12px; display: none; }
 
-        /* ផ្ទាំងឆាត (Chat Window Modal - Text Only) */
+        /* Chat Modal */
         .chat-modal {
             display: none;
             position: fixed;
@@ -383,11 +448,7 @@
             padding: 10px;
         }
         @media (min-width: 640px) {
-            .chat-modal {
-                align-items: flex-end;
-                justify-content: flex-start;
-                padding: 20px;
-            }
+            .chat-modal { align-items: flex-end; justify-content: flex-start; padding: 20px; }
         }
         .chat-window {
             background: #131b2e;
@@ -402,110 +463,29 @@
             overflow: hidden;
             box-shadow: 0 12px 35px rgba(0,0,0,0.65);
         }
-        .chat-header {
-            background: #1e293b;
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #334155;
-        }
+        .chat-header { background: #1e293b; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
         .chat-header-info { display: flex; align-items: center; gap: 10px; }
         .chat-header-info img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #38bdf8; }
 
-        /* ក្រឡោន ២ សម្រាប់ Admin៖ អតិថិជនឆាតមកថ្មីៗ & អតិថិជនទាំងអស់ */
-        .chat-admin-tabs {
-            display: flex;
-            background: #0f172a;
-            padding: 6px;
-            gap: 6px;
-            border-bottom: 1px solid #334155;
-        }
-        .chat-tab-btn {
-            flex: 1;
-            padding: 8px 6px;
-            border: none;
-            border-radius: 10px;
-            background: transparent;
-            color: #94a3b8;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.15s;
-        }
-        .chat-tab-btn.active {
-            background: #0284c7;
-            color: #fff;
-        }
+        .chat-admin-tabs { display: flex; background: #0f172a; padding: 6px; gap: 6px; border-bottom: 1px solid #334155; }
+        .chat-tab-btn { flex: 1; padding: 8px 6px; border: none; border-radius: 10px; background: transparent; color: #94a3b8; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.15s; }
+        .chat-tab-btn.active { background: #0284c7; color: #fff; }
 
         .chat-rooms-list { flex: 1; overflow-y: auto; padding: 12px; }
-        .chat-room-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #090d16;
-            padding: 10px 12px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            border: 1px solid #1e293b;
-            transition: 0.15s;
-        }
+        .chat-room-item { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px 12px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; border: 1px solid #1e293b; transition: 0.15s; }
         .chat-room-item:hover { border-color: #38bdf8; background: #0f172a; }
-        .chat-messages-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: #090d16;
-        }
+        .chat-messages-area { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: #090d16; }
         .msg-row { display: flex; gap: 8px; max-width: 82%; align-items: flex-end; }
         .msg-row.mine { align-self: flex-end; flex-direction: row-reverse; }
         .msg-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #1e293b; }
-        .msg-bubble {
-            background: #1e293b;
-            color: #f8fafc;
-            padding: 9px 13px;
-            border-radius: 14px;
-            font-size: 13px;
-            line-height: 1.4;
-            word-break: break-word;
-        }
+        .msg-bubble { background: #1e293b; color: #f8fafc; padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.4; word-break: break-word; }
         .msg-row.mine .msg-bubble { background: #0284c7; color: #fff; }
         .msg-sender { font-size: 10px; color: #94a3b8; margin-bottom: 2px; font-weight: bold; }
         .msg-time { font-size: 9px; opacity: 0.7; margin-top: 4px; text-align: right; }
 
-        .chat-input-bar {
-            background: #1e293b;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-top: 1px solid #334155;
-        }
-        .chat-text-input {
-            flex: 1;
-            padding: 10px 14px;
-            border-radius: 20px;
-            border: 1px solid #334155;
-            background: #090d16;
-            color: #fff;
-            font-size: 13px;
-            outline: none;
-        }
-        .chat-send-btn {
-            background: #10b981;
-            color: #fff;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
+        .chat-input-bar { background: #1e293b; padding: 10px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #334155; }
+        .chat-text-input { flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid #334155; background: #090d16; color: #fff; font-size: 13px; outline: none; }
+        .chat-send-btn { background: #10b981; color: #fff; border: none; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
 
         /* Credential & Modals */
         .cred-box { background: #090d16; border: 2px solid #10b981; border-radius: 12px; padding: 12px; margin: 12px 0; text-align: left; }
@@ -535,12 +515,12 @@
             <span>KTY STORE</span>
         </div>
         <div id="authArea">
-            <button class="tg-btn" onclick="openLoginModal()">✈️ ចុះឈ្មោះតាម Telegram</button>
+            <button class="tg-btn" onclick="openLoginModal()">ចុះឈ្មោះ</button>
         </div>
     </div>
 </div>
 
-<!-- ==================== ប៊ូតុង "ឆាត" នៅខាងក្រោមឆ្វេងដៃ ==================== -->
+<!-- ប៊ូតុង "ឆាត" នៅខាងក្រោមឆ្វេងដៃ -->
 <button class="floating-chat-btn" onclick="openChatModal()">
     <span>💬 ឆាត</span>
     <span id="chatUnreadBadge" class="chat-badge">0</span>
@@ -711,8 +691,10 @@
             <div class="banner-dots" id="bannerDots"></div>
         </div>
 
-        <div class="sec-title">🎮 ជ្រើសរើសហ្គេម (Top-up Item)</div>
-        <div class="games-grid" id="gamesGrid"></div>
+        <div id="gamesTopupSection">
+            <div class="sec-title">🎮 ជ្រើសរើសហ្គេម (Top-up Item)</div>
+            <div class="games-grid" id="gamesGrid"></div>
+        </div>
 
         <div id="accountsHomeSection" style="display:none;">
             <div class="sec-title">🔐 គណនីហ្គេមដាក់លក់ (ទិញភ្លាមបានលេងភ្លាម)</div>
@@ -742,6 +724,10 @@
                 <div class="box" id="playerInputBox">
                     <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
                     <div id="dynamicInputs"></div>
+
+                    <!-- ប្រអប់បង្ហាញប្រវត្តិរូប Avatar និងឈ្មោះគណនី Roblox ដោយស្វ័យប្រវត្តិ -->
+                    <div id="robloxProfileResult"></div>
+
                     <div class="note-text" id="gameInputNote"></div>
                 </div>
             </div>
@@ -795,6 +781,51 @@
     </div>
 </div>
 
+<!-- ==================== Footer បង្កើនទំនុកចិត្តខាងក្រោមវេបសាយ ==================== -->
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png" alt="KTY Store">
+                    <span>KTY STORE</span>
+                </div>
+                <p class="footer-desc">ហាងលក់ Account Roblox, Robux និង Top-up ហ្គេម។ បង់តាម KHQR ចូលភ្លាម។</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>សេវាកម្ម</h4>
+                <ul class="footer-links">
+                    <li><span onclick="scrollToSection('accountsHomeSection')">Account Roblox</span></li>
+                    <li><span onclick="scrollToSection('gamesTopupSection')">TOP UP GAME</span></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>ជំនួយ</h4>
+                <ul class="footer-links">
+                    <li><span onclick="scrollToSection('gamesTopupSection')">ដាក់ប្រាក់</span></li>
+                    <li><span onclick="handleFooterOrdersClick()">Orders</span></li>
+                    <li><a href="https://t.me/novala16" target="_blank" rel="noopener noreferrer">Contact telegram @novala16</a></li>
+                    <li><span onclick="openInfoModal('Privacy & Terms', 'រាល់ការទូទាត់តាម KHQR ត្រូវបានផ្ទៀងផ្ទាត់ដោយស្វ័យប្រវត្តិ និងមានសុវត្ថិភាព ១០០%។ សូមពិនិត្យព័ត៌មានគណនីហ្គេមឱ្យបានត្រឹមត្រូវមុនពេលបង់ប្រាក់។')">Privacy · Terms</span></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>បង់ប្រាក់តាម</h4>
+                <div class="khqr-badge">
+                    <span class="khqr-tag">KHQR</span>
+                    <span>Bakong / គ្រប់ធនាគារ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            © 2026 KTY Store| All rights reserved
+        </div>
+    </div>
+</footer>
+
 <!-- ==================== ផ្ទាំងឆាតឯកជនក្នុងវេបសាយ (TEXT ONLY) ==================== -->
 <div class="chat-modal" id="chatModal">
     <div class="chat-window">
@@ -810,7 +841,6 @@
             <button onclick="closeChatModal()" style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
         </div>
 
-        <!-- ផ្ទាំងបញ្ជីអតិថិជនសម្រាប់តែ Admin (មានក្រឡោន ២) -->
         <div id="adminChatDirectoryView" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
             <div class="chat-admin-tabs">
                 <button class="chat-tab-btn active" id="tabRecentChatsBtn" onclick="switchAdminChatTab('recent')">💬 អតិថិជនឆាតមកថ្មីៗ</button>
@@ -822,7 +852,6 @@
             <div id="adminChatRoomsList" class="chat-rooms-list"></div>
         </div>
 
-        <!-- ផ្ទាំងសន្ទនា (សារជាអក្សរសុទ្ធ) -->
         <div id="chatConversationView" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
             <div id="chatMessagesArea" class="chat-messages-area"></div>
             <div class="chat-input-bar">
@@ -833,11 +862,11 @@
     </div>
 </div>
 
-<!-- Modal ចុះឈ្មោះតាម Telegram -->
+<!-- Modal ចុះឈ្មោះ -->
 <div class="modal" id="loginModal">
     <div class="modal-box">
-        <h3 style="margin-bottom:8px;">✈️ ចុះឈ្មោះតាមគណនី Telegram</h3>
-        <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">ចុះឈ្មោះដើម្បីរក្សាទុកព័ត៌មានគណនីហ្គេមដែលអ្នកបានទិញ និងជជែកជាមួយម្ចាស់ហាង</p>
+        <h3 style="margin-bottom:8px;">ចុះឈ្មោះ</h3>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">ចុះឈ្មោះតាមគណនី Telegram ដើម្បីរក្សាទុកប្រវត្តិការទិញ និងព័ត៌មានគណនីហ្គេមរបស់អ្នក</p>
         <div id="tgWidgetContainer" style="min-height:48px; display:flex; justify-content:center; align-items:center; margin-bottom:10px;"></div>
         <div id="loginError" style="color:#f43f5e; font-size:12px; margin-top:8px;"></div>
         <button style="background:none; border:none; color:#94a3b8; margin-top:12px; cursor:pointer;" onclick="closeModal('loginModal')">បិទ</button>
@@ -934,6 +963,15 @@
     </div>
 </div>
 
+<!-- Modal ព័ត៌មាន Privacy / Terms -->
+<div class="modal" id="infoModal">
+    <div class="modal-box">
+        <h3 id="infoModalTitle" style="margin-bottom:10px; color:#38bdf8;">Privacy · Terms</h3>
+        <p id="infoModalBody" style="font-size:13px; color:#cbd5e1; line-height:1.6; margin-bottom:16px;"></p>
+        <button class="btn btn-buy" onclick="closeModal('infoModal')">យល់ព្រម</button>
+    </div>
+</div>
+
 <script>
     const API_URL = "https://kty-store.onrender.com";
     const BOT_USERNAME = "KTYlogin_bot";
@@ -948,6 +986,8 @@
     let selectedGame = null;
     let selectedItem = null;
     let selectedAccount = null;
+    let verifiedRobloxUser = null;
+    let robloxLookupDebounce = null;
 
     let currentMD5 = "";
     let pollingTimer = null;
@@ -960,10 +1000,9 @@
     let editingAccountId = null;
     let uploadedAccImages = [];
 
-    // អថេរសម្រាប់ប្រព័ន្ធឆាត
     let activeChatRoomId = null;
     let chatPollTimer = null;
-    let adminChatTab = "recent"; // "recent" ឬ "all"
+    let adminChatTab = "recent";
     let adminChatOverviewData = { recent_rooms: [], all_users: [] };
 
     window.onload = async () => {
@@ -974,6 +1013,28 @@
         setInterval(checkChatUnreadBackground, 6000);
         checkChatUnreadBackground();
     };
+
+    function scrollToSection(sectionId) {
+        goHomePage();
+        setTimeout(() => {
+            const el = document.getElementById(sectionId);
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+    }
+
+    function handleFooterOrdersClick() {
+        if (currentUser && currentUser.id) {
+            openProfileModal();
+        } else {
+            openLoginModal();
+        }
+    }
+
+    function openInfoModal(title, body) {
+        document.getElementById("infoModalTitle").innerText = title;
+        document.getElementById("infoModalBody").innerText = body;
+        document.getElementById("infoModal").style.display = "flex";
+    }
 
     function isAdminUser() {
         return currentUser && currentUser.username && currentUser.username.toLowerCase() === "ktyofficial169";
@@ -1239,6 +1300,66 @@
         } catch (e) {}
     }
 
+    // ==================== មុខងារពិនិត្យឈ្មោះ និងរូបភាព Avatar របស់ Roblox ====================
+    function isRobloxGame(game) {
+        return game && game.name && game.name.toLowerCase().includes("roblox");
+    }
+
+    function onRobloxInputTyping() {
+        verifiedRobloxUser = null;
+        if (robloxLookupDebounce) clearTimeout(robloxLookupDebounce);
+        robloxLookupDebounce = setTimeout(() => {
+            lookupRobloxProfile(true);
+        }, 700);
+    }
+
+    async function lookupRobloxProfile(isAuto = false) {
+        const inputEl = document.getElementById("custInput1");
+        const resultEl = document.getElementById("robloxProfileResult");
+        if (!inputEl || !resultEl) return;
+
+        const username = inputEl.value.trim();
+        if (!username) {
+            resultEl.innerHTML = "";
+            verifiedRobloxUser = null;
+            return;
+        }
+
+        resultEl.innerHTML = `<div style="font-size:12px; color:#38bdf8; margin-top:8px;">⏳ កំពុងពិនិត្យប្រវត្តិរូបគណនី Roblox...</div>`;
+
+        try {
+            const res = await fetch(`${API_URL}/api/roblox/lookup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: username })
+            });
+            const data = await res.json();
+
+            if (data.success && data.user) {
+                verifiedRobloxUser = data.user;
+                const avatarSrc = data.user.avatar_url || DEFAULT_GAME_ICON;
+                resultEl.innerHTML = `
+                    <div class="roblox-profile-card" style="display:flex;">
+                        <img src="${avatarSrc}" onerror="this.src='${DEFAULT_GAME_ICON}'">
+                        <div style="text-align:left; overflow:hidden;">
+                            <div style="font-size:11px; color:#10b981; font-weight:bold;">✅ រកឃើញគណនី Roblox ត្រឹមត្រូវ</div>
+                            <div style="font-size:14px; font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(data.user.display_name)}</div>
+                            <div style="font-size:12px; color:#cbd5e1;">@${escapeHtml(data.user.username)} <span style="color:#64748b;">(ID: ${data.user.id})</span></div>
+                        </div>
+                    </div>`;
+            } else {
+                verifiedRobloxUser = null;
+                resultEl.innerHTML = `<div style="font-size:12px; color:#f43f5e; margin-top:8px; background:rgba(239,68,68,0.1); padding:8px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">${escapeHtml(data.error || "រកមិនឃើញគណនី Roblox នេះទេ!")}</div>`;
+            }
+        } catch (e) {
+            if (!isAuto) {
+                resultEl.innerHTML = `<div style="font-size:12px; color:#f43f5e; margin-top:8px;">⚠️ មិនអាចភ្ជាប់ទៅប្រព័ន្ធពិនិត្យឈ្មោះបានទេ!</div>`;
+            } else {
+                resultEl.innerHTML = "";
+            }
+        }
+    }
+
     // ==================== មុខងារហាង និងការទូទាត់ KHQR ====================
     function getUserOrdersKey() {
         return currentUser && currentUser.id ? `kty_orders_${String(currentUser.id)}` : "kty_orders_guest";
@@ -1261,6 +1382,7 @@
         selectedGame = null;
         selectedItem = null;
         selectedAccount = null;
+        verifiedRobloxUser = null;
         document.getElementById("gameDetailView").style.display = "none";
         document.getElementById("accountDetailView").style.display = "none";
         document.getElementById("homePageView").style.display = "block";
@@ -1270,6 +1392,7 @@
     function openGamePage(game) {
         selectedGame = game;
         selectedItem = null;
+        verifiedRobloxUser = null;
 
         document.getElementById("homePageView").style.display = "none";
         document.getElementById("accountDetailView").style.display = "none";
@@ -1283,16 +1406,29 @@
         document.getElementById("selectedGameTitle").innerText = `បំពេញព័ត៌មាន (${game.name})`;
 
         const dynInputs = document.getElementById("dynamicInputs");
+        const robloxResEl = document.getElementById("robloxProfileResult");
         dynInputs.innerHTML = "";
+        robloxResEl.innerHTML = "";
         let hasInput = false;
 
         if (game.input1_enabled) {
             hasInput = true;
-            dynInputs.innerHTML += `
-                <div class="input-group">
-                    <label>${game.input1_label || "គណនី / ID"}</label>
-                    <input type="text" id="custInput1" placeholder="${game.input1_placeholder || ""}">
-                </div>`;
+            if (isRobloxGame(game)) {
+                dynInputs.innerHTML += `
+                    <div class="input-group">
+                        <label>${game.input1_label || "Roblox Username"}</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="custInput1" placeholder="${game.input1_placeholder || "បញ្ចូលឈ្មោះគណនី Roblox..."}" oninput="onRobloxInputTyping()">
+                            <button type="button" class="roblox-check-btn" onclick="lookupRobloxProfile(false)">🔍 ឆែកឈ្មោះ</button>
+                        </div>
+                    </div>`;
+            } else {
+                dynInputs.innerHTML += `
+                    <div class="input-group">
+                        <label>${game.input1_label || "គណនី / ID"}</label>
+                        <input type="text" id="custInput1" placeholder="${game.input1_placeholder || ""}">
+                    </div>`;
+            }
         }
         if (game.input2_enabled) {
             hasInput = true;
@@ -1399,7 +1535,7 @@
                 adminPanel.style.display = "none";
             }
         } else {
-            authArea.innerHTML = `<button class="tg-btn" onclick="openLoginModal()">✈️ ចុះឈ្មោះតាម Telegram</button>`;
+            authArea.innerHTML = `<button class="tg-btn" onclick="openLoginModal()">ចុះឈ្មោះ</button>`;
             adminPanel.style.display = "none";
         }
     }
@@ -2062,7 +2198,11 @@
         if (selectedGame.input1_enabled) {
             const v1 = document.getElementById("custInput1").value.trim();
             if (!v1) { errEl.innerText = `⚠️ សូមបញ្ចូល ${selectedGame.input1_label}!`; return; }
-            pInfo.push(v1);
+            if (verifiedRobloxUser && verifiedRobloxUser.username.toLowerCase() === v1.toLowerCase()) {
+                pInfo.push(`${verifiedRobloxUser.username} (${verifiedRobloxUser.display_name})`);
+            } else {
+                pInfo.push(v1);
+            }
         }
         if (selectedGame.input2_enabled) {
             const v2 = document.getElementById("custInput2").value.trim();
