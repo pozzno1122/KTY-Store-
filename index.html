@@ -301,7 +301,6 @@
         input:focus { border-color: #38bdf8; }
         .note-text { font-size: 12px; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 10px 12px; border-radius: 10px; margin-top: 8px; line-height: 1.4; }
 
-        /* កាតបង្ហាញប្រវត្តិរូប Avatar & ឈ្មោះគណនី (Roblox / MLBB / Free Fire) */
         .roblox-profile-card {
             display: none;
             margin-top: 10px;
@@ -492,7 +491,6 @@
         .chat-text-input { flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid #334155; background: #090d16; color: #fff; font-size: 13px; outline: none; }
         .chat-send-btn { background: #10b981; color: #fff; border: none; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
 
-        /* Credential & Modals */
         .cred-box { background: #090d16; border: 2px solid #10b981; border-radius: 12px; padding: 12px; margin: 12px 0; text-align: left; }
         .cred-field { background: #131b2e; padding: 8px 10px; border-radius: 8px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
         .copy-btn { background: #0284c7; color: #fff; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: bold; }
@@ -531,7 +529,6 @@
 </button>
 
 <div class="container">
-    <!-- ==================== ទំព័រទី ១៖ ទំព័រដើម (HOME PAGE) ==================== -->
     <div id="homePageView" class="page-view">
         <div id="adminPanel">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -706,7 +703,6 @@
         </div>
     </div>
 
-    <!-- ==================== ទំព័រទី ២៖ ទំព័រទិញកញ្ចប់ Item ហ្គេម ==================== -->
     <div id="gameDetailView" class="page-view" style="display:none;">
         <div class="back-bar">
             <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
@@ -752,7 +748,6 @@
         </div>
     </div>
 
-    <!-- ==================== ទំព័រទី ៣៖ ទំព័រព័ត៌មានគណនីហ្គេម ==================== -->
     <div id="accountDetailView" class="page-view" style="display:none;">
         <div class="back-bar">
             <button class="btn-back" onclick="goHomePage()">← ត្រឡប់ទៅទំព័រដើម</button>
@@ -782,7 +777,6 @@
     </div>
 </div>
 
-<!-- ==================== Footer បង្កើនទំនុកចិត្តខាងក្រោមវេបសាយ ==================== -->
 <footer class="site-footer">
     <div class="footer-inner">
         <div class="footer-grid">
@@ -827,7 +821,6 @@
     </div>
 </footer>
 
-<!-- ==================== ផ្ទាំងឆាតឯកជនក្នុងវេបសាយ (TEXT ONLY) ==================== -->
 <div class="chat-modal" id="chatModal">
     <div class="chat-window">
         <div class="chat-header">
@@ -863,7 +856,6 @@
     </div>
 </div>
 
-<!-- Modal ចុះឈ្មោះ -->
 <div class="modal" id="loginModal">
     <div class="modal-box">
         <h3 style="margin-bottom:8px;">ចុះឈ្មោះ</h3>
@@ -874,7 +866,6 @@
     </div>
 </div>
 
-<!-- Modal ប្រវត្តិការទិញរបស់អតិថិជន -->
 <div class="modal" id="profileModal">
     <div class="modal-box">
         <h3 id="profileTitle" style="margin-bottom:4px;">គណនីរបស់ខ្ញុំ</h3>
@@ -886,7 +877,6 @@
     </div>
 </div>
 
-<!-- Modal បង្ហាញ KHQR (Auto-Open ABA លើទូរសព្ទ ឬ ថតអេក្រង់បង់តាមធនាគារផ្សេង) -->
 <div class="modal" id="qrModal">
     <div class="modal-box">
         <div id="qrView">
@@ -894,7 +884,7 @@
             <div id="qrOrderDesc" style="font-size:12px; color:#94a3b8; margin:4px 0 12px;"></div>
             <div style="background:#fff; color:#000; border-radius:12px; overflow:hidden; margin-bottom:10px;">
                 <div style="background:#e11d48; color:#fff; padding:8px; font-weight:bold;">KHQR</div>
-                <div style="padding-top:8px; font-weight:bold; font-size:14px;">KTY TOPUP STORE</div>
+                <div style="padding-top:8px; font-weight:bold; font-size:14px;">KTY STORE</div>
                 <div id="qrAmountText" style="font-size:22px; font-weight:bold; color:#e11d48;">$0.00</div>
                 <div id="qrImgHolder" style="padding:12px; display:flex; justify-content:center;"></div>
                 <div id="qrCountdownText" style="padding-bottom:8px; font-size:11px; color:#e11d48; font-weight:bold;">សុពលភាព៖ 05:00</div>
@@ -921,7 +911,7 @@
         <div id="thankYouView" style="display:none;">
             <div class="check-circle">✓</div>
             <h2 style="color:#10b981; font-size:20px; margin-bottom:6px;">ការទូទាត់ជោគជ័យ!</h2>
-            <p id="thankYouSubText" style="font-size:13px; color:#cbd5e1; line-height:1.4;">សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY TOPUP STORE</b>។</p>
+            <p id="thankYouSubText" style="font-size:13px; color:#cbd5e1; line-height:1.4;">សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY STORE</b>។</p>
             
             <div id="deliveredAccountBox" class="cred-box" style="display:none;">
                 <div style="font-size:12px; color:#10b981; font-weight:bold;">🎉 ព័ត៌មានគណនីហ្គេមរបស់អ្នក (រក្សាទុកក្នុងប្រវត្តិការទិញរួចរាល់)៖</div>
@@ -969,7 +959,6 @@
     </div>
 </div>
 
-<!-- Modal ព័ត៌មាន Privacy / Terms -->
 <div class="modal" id="infoModal">
     <div class="modal-box">
         <h3 id="infoModalTitle" style="margin-bottom:10px; color:#38bdf8;">Privacy · Terms</h3>
@@ -980,7 +969,8 @@
 
 <script>
     const API_URL = "https://kty-store.onrender.com";
-    const BOT_USERNAME = "KTYlogin_bot";
+    const NEW_BOT_TOKEN = "9286576815:AAGW1VCYg8uZDqvGj5zATrnFaUjwghJpmqc";
+    let BOT_USERNAME = "KTYlogin_bot";
     const SITE_LOGO = "https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png";
     const DEFAULT_GAME_ICON = "https://cdn-icons-png.flaticon.com/512/686/686589.png";
     const DEFAULT_ITEM_ICON = "https://cdn-icons-png.flaticon.com/512/616/616490.png";
@@ -1013,7 +1003,18 @@
     let adminChatTab = "recent";
     let adminChatOverviewData = { recent_rooms: [], all_users: [] };
 
+    async function resolveBotUsername() {
+        try {
+            const res = await fetch(`https://api.telegram.org/bot${NEW_BOT_TOKEN}/getMe`);
+            const data = await res.json();
+            if (data.ok && data.result && data.result.username) {
+                BOT_USERNAME = data.result.username;
+            }
+        } catch (e) {}
+    }
+
     window.onload = async () => {
+        await resolveBotUsername();
         checkAuth();
         renderGames();
         await fetchStoreData();
@@ -1070,7 +1071,6 @@
         };
     }
 
-    // ==================== មុខងារប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Text Only) ====================
     async function checkChatUnreadBackground() {
         const badge = document.getElementById("chatUnreadBadge");
         try {
@@ -1279,7 +1279,7 @@
     }
 
     function escapeJs(str) {
-        return String(str || "").split("\\").join("\\\\").split("'").join("\\'");
+        return String(str || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
     }
 
     async function sendChatText() {
@@ -1308,7 +1308,6 @@
         } catch (e) {}
     }
 
-    // ==================== មុខងារពិនិត្យឈ្មោះគណនី (Roblox / MLBB / Free Fire) ====================
     function getLookupGameType(game) {
         if (!game || !game.name) return null;
         const n = game.name.toLowerCase();
@@ -1440,7 +1439,6 @@
         }
     }
 
-    // ==================== មុខងារហាង និងការទូទាត់ KHQR + Auto ABA ====================
     function getUserOrdersKey() {
         return currentUser && currentUser.id ? `kty_orders_${String(currentUser.id)}` : "kty_orders_guest";
     }
@@ -1651,7 +1649,8 @@
         }
     }
 
-    function openLoginModal() {
+    async function openLoginModal() {
+        await resolveBotUsername();
         document.getElementById("loginError").innerText = "";
         const widgetContainer = document.getElementById("tgWidgetContainer");
         widgetContainer.innerHTML = "";
@@ -2298,7 +2297,6 @@
         saveStoreToServer();
     }
 
-    // ==================== បង្កើត KHQR & Auto-Open ABA Mobile លើទូរសព្ទ ====================
     function tryAutoOpenABA() {
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (!isMobile) return;
@@ -2534,7 +2532,7 @@
             credBox.style.display = "none";
             playerRow.style.display = "flex";
             document.getElementById("recPlayer").innerText = order.player_info;
-            subText.innerHTML = "សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY TOPUP STORE</b>។ ប្រព័ន្ធបានបញ្ជូនព័ត៌មានទៅក្រុមការងារដើម្បីដំណើរការជូនអ្នកភ្លាមៗ!";
+            subText.innerHTML = "សូមអរគុណសម្រាប់ការគាំទ្រ <b>KTY STORE</b>។ ប្រព័ន្ធបានបញ្ជូនព័ត៌មានទៅក្រុមការងារដើម្បីដំណើរការជូនអ្នកភ្លាមៗ!";
         }
 
         document.getElementById("qrView").style.display = "none";
