@@ -211,69 +211,35 @@ def serve_tg_image(file_id):
     except Exception as e:
         return str(e), 500
 
-# ==================== ប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Website-Only Live Chat) ====================
+# ==================== ប្រព័ន្ធឆាតឯកជនក្នុងវេបសាយ (Text Only - លឿន និងស្រាល) ====================
 @app.route('/api/chat/send', methods=['POST'])
 def chat_send():
-    # គាំទ្រទាំង FormData (សម្រាប់រូបភាព និងសំឡេង) និង JSON (សម្រាប់អក្សរ)
-    if request.content_type and 'multipart/form-data' in request.content_type:
-        room_id = str(request.form.get("room_id", "")).strip()
-        sender_id = str(request.form.get("sender_id", "")).strip()
-        sender_name = str(request.form.get("sender_name", "User")).strip()
-        sender_username = str(request.form.get("sender_username", "")).strip()
-        sender_photo = str(request.form.get("sender_photo", "")).strip()
-        is_admin = request.form.get("is_admin") == "true"
-        msg_type = str(request.form.get("msg_type", "text")).strip()
-        text = str(request.form.get("text", "")).strip()
-    else:
-        payload = request.get_json(silent=True) or {}
-        room_id = str(payload.get("room_id", "")).strip()
-        sender_id = str(payload.get("sender_id", "")).strip()
-        sender_name = str(payload.get("sender_name", "User")).strip()
-        sender_username = str(payload.get("sender_username", "")).strip()
-        sender_photo = str(payload.get("sender_photo", "")).strip()
-        is_admin = bool(payload.get("is_admin", False))
-        msg_type = str(payload.get("msg_type", "text")).strip()
-        text = str(payload.get("text", "")).strip()
+    payload = request.get_json(silent=True) or {}
+    room_id = str(payload.get("room_id", "")).strip()
+    sender_id = str(payload.get("sender_id", "")).strip()
+    sender_name = str(payload.get("sender_name", "User")).strip()
+    sender_username = str(payload.get("sender_username", "")).strip()
+    sender_photo = str(payload.get("sender_photo", "")).strip()
+    is_admin = bool(payload.get("is_admin", False))
+    text = str(payload.get("text", "")).strip()
 
-    if not room_id or not sender_id:
-        return jsonify({"success": False, "error": "Missing user info"}), 400
-
-    file_id = ""
-    if msg_type in ["image", "voice"] and 'media' in request.files:
-        media_file = request.files['media']
-        try:
-            # ផ្ទុកឯកសារសំឡេង/រូបភាពក្នុង Cloud Storage ដោយស្ងៀមស្ងាត់ (មិនបង្ហាញជាសារជូនដំណឹង Telegram ឡើយ)
-            endpoint = "sendPhoto" if msg_type == "image" else "sendDocument"
-            field_name = "photo" if msg_type == "image" else "document"
-            res = requests.post(
-                f"https://api.telegram.org/bot{TG_BOT_TOKEN}/{endpoint}",
-                files={field_name: (media_file.filename, media_file.stream, media_file.mimetype)},
-                data={'chat_id': TG_GROUP_ID, 'disable_notification': True},
-                timeout=20
-            ).json()
-            if res.get("ok"):
-                if msg_type == "image":
-                    file_id = res["result"]["photo"][-1]["file_id"]
-                else:
-                    file_id = res["result"]["document"]["file_id"]
-            else:
-                return jsonify({"success": False, "error": "មិនអាចផ្ទុកឯកសារបានទេ!"}), 500
-        except Exception as e:
-            return jsonify({"success": False, "error": str(e)}), 500
-
-    if msg_type == "text" and not text:
-        return jsonify({"success": False, "error": "Empty message"}), 400
+    if not room_id or not sender_id or not text:
+        return jsonify({"success": False, "error": "សូមបញ្ចូលសារជាអក្សរ!"}), 400
 
     d = load_data()
     chats = d.setdefault("chats", {})
+    users = d.get("users", {})
+    target_user = users.get(room_id, {})
+
     if room_id not in chats:
         chats[room_id] = {
             "user_id": room_id,
-            "user_name": sender_name if not is_admin else "Customer",
-            "user_username": sender_username if not is_admin else "",
-            "user_photo": sender_photo if not is_admin else "",
+            "user_name": target_user.get("first_name", sender_name if not is_admin else "Customer"),
+            "user_username": target_user.get("username", sender_username if not is_admin else ""),
+            "user_photo": target_user.get("photo_url", sender_photo if not is_admin else ""),
             "unread_admin": 0,
             "unread_user": 0,
+            "updated_ts": time.time(),
             "messages": []
         }
 
@@ -287,19 +253,18 @@ def chat_send():
     else:
         room["unread_user"] = room.get("unread_user", 0) + 1
 
+    room["updated_ts"] = time.time()
+
     msg_obj = {
         "id": f"m_{int(time.time()*1000)}",
         "sender_id": sender_id,
         "sender_name": sender_name,
         "sender_photo": sender_photo,
         "is_admin": is_admin,
-        "type": msg_type,
         "text": text,
-        "file_id": file_id,
         "time": time.strftime("%H:%M")
     }
     room["messages"].append(msg_obj)
-    # រក្សាទុកសារចុងក្រោយ 150 សារក្នុងមួយបន្ទប់ឆាត ដើម្បីឱ្យដើរលឿន
     if len(room["messages"]) > 150:
         room["messages"] = room["messages"][-150:]
 
@@ -333,35 +298,54 @@ def chat_get_room():
         "unread_user": room.get("unread_user", 0)
     })
 
-@app.route('/api/chat/admin/rooms', methods=['POST'])
-def chat_admin_rooms():
+# ទាញយកទាំង "អតិថិជនឆាតមកថ្មីៗ" និង "អតិថិជនទាំងអស់ដែលបានចុះឈ្មោះ" សម្រាប់ Admin
+@app.route('/api/chat/admin/overview', methods=['POST'])
+def chat_admin_overview():
     d = load_data()
     chats = d.get("chats", {})
-    rooms_list = []
+    users = d.get("users", {})
+
+    recent_rooms = []
     total_unread = 0
-    for r_id, r_data in chats.items():
+
+    # តម្រៀបបន្ទប់ឆាតតាមពេលវេលាចុងក្រោយ
+    sorted_chats = sorted(chats.items(), key=lambda x: x[1].get("updated_ts", 0), reverse=True)
+    for r_id, r_data in sorted_chats:
         msgs = r_data.get("messages", [])
-        last_msg = msgs[-1] if msgs else None
-        last_preview = ""
-        if last_msg:
-            if last_msg["type"] == "text":
-                last_preview = last_msg["text"]
-            elif last_msg["type"] == "image":
-                last_preview = "🖼️ បានផ្ញើរូបភាព"
-            elif last_msg["type"] == "voice":
-                last_preview = "🎤 សារសំឡេង"
+        if not msgs:
+            continue
+        last_msg = msgs[-1]
         unread = r_data.get("unread_admin", 0)
         total_unread += unread
-        rooms_list.append({
+        recent_rooms.append({
             "room_id": r_id,
             "user_name": r_data.get("user_name", "User"),
             "user_username": r_data.get("user_username", ""),
             "user_photo": r_data.get("user_photo", ""),
             "unread_admin": unread,
-            "last_preview": last_preview,
-            "last_time": last_msg["time"] if last_msg else ""
+            "last_preview": last_msg.get("text", ""),
+            "last_time": last_msg.get("time", "")
         })
-    return jsonify({"success": True, "rooms": list(reversed(rooms_list)), "total_unread": total_unread})
+
+    # បញ្ជីអតិថិជនទាំងអស់ដែលបានចុះឈ្មោះក្នុងវេបសាយ (មិនរាប់បញ្ចូល Admin ខ្លួនឯង)
+    all_users = []
+    for u_id, u_data in users.items():
+        if u_data.get("username", "").lower() == ADMIN_USERNAME:
+            continue
+        all_users.append({
+            "user_id": str(u_id),
+            "user_name": u_data.get("first_name", "User"),
+            "user_username": u_data.get("username", ""),
+            "user_photo": u_data.get("photo_url", ""),
+            "joined_at": u_data.get("joined_at", "")
+        })
+
+    return jsonify({
+        "success": True,
+        "recent_rooms": recent_rooms,
+        "all_users": list(reversed(all_users)),
+        "total_unread": total_unread
+    })
 
 # ==================== ការគ្រប់គ្រងគណនីហ្គេម & ការទូទាត់ KHQR ====================
 @app.route('/api/admin/accounts', methods=['POST'])
