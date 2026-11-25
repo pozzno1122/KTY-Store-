@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KTY STORE - ហាងលក់ Account Roblox, Robux និង Top-up ហ្គេម</title>
     <link rel="icon" type="image/png" href="https://cdn.phototourl.com/anon/2026-11-24-d0cb441f-365e-4b31-aa8f-b2eba182da3b.png">
+    <script>
+        if (window.location.hostname === "www.ktystore.online" || (window.location.hostname === "ktystore.online" && window.location.protocol === "http:")) {
+            window.location.replace("https://ktystore.online" + window.location.pathname + window.location.search);
+        }
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -520,7 +525,6 @@
     </div>
 </div>
 
-<!-- ប៊ូតុង "ឆាត" នៅខាងក្រោមឆ្វេងដៃ -->
 <button class="floating-chat-btn" onclick="openChatModal()">
     <span>💬 ឆាត</span>
     <span id="chatUnreadBadge" class="chat-badge">0</span>
@@ -724,7 +728,6 @@
                 <div class="box" id="playerInputBox">
                     <div class="sec-title"><span class="step-num">1</span> <span id="selectedGameTitle">បំពេញព័ត៌មានគណនី</span></div>
                     <div id="dynamicInputs"></div>
-                    <!-- ប្រអប់បង្ហាញប្រវត្តិរូប Avatar & ឈ្មោះគណនី (Roblox / MLBB / Free Fire) -->
                     <div id="robloxProfileResult"></div>
                     <div class="note-text" id="gameInputNote"></div>
                 </div>
@@ -1276,7 +1279,7 @@
     }
 
     function escapeJs(str) {
-        return String(str || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        return String(str || "").split("\\").join("\\\\").split("'").join("\\'");
     }
 
     async function sendChatText() {
@@ -1497,32 +1500,32 @@
             if (gType === "roblox") {
                 dynInputs.innerHTML += `
                     <div class="input-group">
-                        <label>${game.input1_label || "Roblox Username"}</label>
+                        <label>${escapeHtml(game.input1_label || "Roblox Username")}</label>
                         <div style="display:flex; gap:8px;">
-                            <input type="text" id="custInput1" placeholder="${game.input1_placeholder || "បញ្ចូលឈ្មោះគណនី Roblox..."}" oninput="onRobloxInputTyping()">
+                            <input type="text" id="custInput1" placeholder="${escapeHtml(game.input1_placeholder || "បញ្ចូលឈ្មោះគណនី Roblox...")}" oninput="onRobloxInputTyping()">
                             <button type="button" class="roblox-check-btn" onclick="lookupRobloxProfile(false)">🔍 ឆែកឈ្មោះ</button>
                         </div>
                     </div>`;
             } else if (gType === "freefire" || (gType === "mlbb" && !game.input2_enabled)) {
                 dynInputs.innerHTML += `
                     <div class="input-group">
-                        <label>${game.input1_label || "Player ID"}</label>
+                        <label>${escapeHtml(game.input1_label || "Player ID")}</label>
                         <div style="display:flex; gap:8px;">
-                            <input type="text" id="custInput1" placeholder="${game.input1_placeholder || "បញ្ចូល ID ហ្គេម..."}" oninput="onGameIdTyping()">
+                            <input type="text" id="custInput1" placeholder="${escapeHtml(game.input1_placeholder || "បញ្ចូល ID ហ្គេម...")}" oninput="onGameIdTyping()">
                             <button type="button" class="roblox-check-btn" onclick="lookupGameNickname(false)">🔍 ឆែកឈ្មោះ</button>
                         </div>
                     </div>`;
             } else if (gType === "mlbb") {
                 dynInputs.innerHTML += `
                     <div class="input-group">
-                        <label>${game.input1_label || "User ID"}</label>
-                        <input type="text" id="custInput1" placeholder="${game.input1_placeholder || "បញ្ចូល User ID..."}" oninput="onGameIdTyping()">
+                        <label>${escapeHtml(game.input1_label || "User ID")}</label>
+                        <input type="text" id="custInput1" placeholder="${escapeHtml(game.input1_placeholder || "បញ្ចូល User ID...")}" oninput="onGameIdTyping()">
                     </div>`;
             } else {
                 dynInputs.innerHTML += `
                     <div class="input-group">
-                        <label>${game.input1_label || "គណនី / ID"}</label>
-                        <input type="text" id="custInput1" placeholder="${game.input1_placeholder || ""}">
+                        <label>${escapeHtml(game.input1_label || "គណនី / ID")}</label>
+                        <input type="text" id="custInput1" placeholder="${escapeHtml(game.input1_placeholder || "")}">
                     </div>`;
             }
         }
@@ -1532,17 +1535,17 @@
             if (gType === "mlbb") {
                 dynInputs.innerHTML += `
                     <div class="input-group">
-                        <label>${game.input2_label || "Server / Zone ID"}</label>
+                        <label>${escapeHtml(game.input2_label || "Server / Zone ID")}</label>
                         <div style="display:flex; gap:8px;">
-                            <input type="text" id="custInput2" placeholder="${game.input2_placeholder || "បញ្ចូល Server ID..."}" oninput="onGameIdTyping()">
+                            <input type="text" id="custInput2" placeholder="${escapeHtml(game.input2_placeholder || "បញ្ចូល Server ID...")}" oninput="onGameIdTyping()">
                             <button type="button" class="roblox-check-btn" onclick="lookupGameNickname(false)">🔍 ឆែកឈ្មោះ</button>
                         </div>
                     </div>`;
             } else {
                 dynInputs.innerHTML += `
                     <div class="input-group">
-                        <label>${game.input2_label || "Server ID"}</label>
-                        <input type="text" id="custInput2" placeholder="${game.input2_placeholder || ""}">
+                        <label>${escapeHtml(game.input2_label || "Server ID")}</label>
+                        <input type="text" id="custInput2" placeholder="${escapeHtml(game.input2_placeholder || "")}">
                     </div>`;
             }
         }
@@ -1570,7 +1573,7 @@
             card.innerHTML = `
                 <img src="${item.image || DEFAULT_ITEM_ICON}" onerror="this.src='${DEFAULT_ITEM_ICON}'">
                 <div>
-                    <div class="item-name">${item.name}</div>
+                    <div class="item-name">${escapeHtml(item.name)}</div>
                     <div class="item-price">$${parseFloat(item.price).toFixed(2)}</div>
                 </div>
             `;
@@ -1633,7 +1636,7 @@
         if (currentUser && currentUser.id) {
             const displayTag = currentUser.first_name || (currentUser.username ? `@${currentUser.username}` : "User");
             const avatarHtml = currentUser.photo_url ? `<img src="${currentUser.photo_url}">` : `👤`;
-            authArea.innerHTML = `<button class="tg-btn" style="background:#1e293b; border:1px solid #38bdf8;" onclick="openProfileModal()">${avatarHtml} <span>${displayTag}</span></button>`;
+            authArea.innerHTML = `<button class="tg-btn" style="background:#1e293b; border:1px solid #38bdf8;" onclick="openProfileModal()">${avatarHtml} <span>${escapeHtml(displayTag)}</span></button>`;
             
             if (isAdminUser()) {
                 adminPanel.style.display = "block";
@@ -2301,7 +2304,6 @@
         if (!isMobile) return;
         setTimeout(() => {
             try {
-                // បើកកម្មវិធី ABA Mobile ដោយផ្ទាល់ (មិនលោតទៅ Bakong ឡើយ)
                 window.location.href = "abamobilebank://";
             } catch (e) {}
         }, 350);
@@ -2501,13 +2503,11 @@
         } catch (e) {}
     }
 
-    // ផ្ទៀងផ្ទាត់រៀងរាល់ ១៥ វិនាទីម្តង ដើម្បីសន្សំសំចៃកូតា 100 requests/day របស់ Bakong
     function startAutoPaymentCheck() {
         if (pollingTimer) clearInterval(pollingTimer);
         pollingTimer = setInterval(checkPaymentOnce, 15000);
     }
 
-    // ពិនិត្យការបង់ប្រាក់ភ្លាមៗនៅពេលភ្ញៀវត្រឡប់ពី App ABA មកកាន់ Browser វិញ
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible" && currentMD5) {
             checkPaymentOnce();
