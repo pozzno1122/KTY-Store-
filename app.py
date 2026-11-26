@@ -753,7 +753,7 @@ def reseller_shop_toggle():
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
     eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
-    if not is_username_approved_reseller(d, eff_user, tg_id):
+    if not is_admin_request(d, payload) and not is_username_approved_reseller(d, eff_user, tg_id):
         return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     resellers = d.setdefault("resellers", {})
     seller = resellers.setdefault(tg_id, {
