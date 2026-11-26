@@ -1515,45 +1515,16 @@ def check_payment():
     except Exception as e:
         print("Check Payment Error:", e)
         return jsonify({"success": False, "error": str(e)}), 500
+# ==================== Unified Telegram Admin Bot (@ktyofficial169 Only) ====================
+import threading
+
+CTRL_BOT_TOKEN = "9108175209:AAHoT0Wq_7L0LeLFKuEmAv2CjzmtIjt2IqQ"
+CTRL_ADMIN_USERNAME = "ktyofficial169"
+ctrl_user_states = {}
 
 
-# ==================== Integrated Telegram Admin Bot (@ktyofficial169 only) ====================
-import os
-import json
-import time
-import uuid
-import requests
-
-ADMIN_CTRL_BOT_TOKEN = "9108175209:AAHoT0Wq_7L0LeLFKuEmAv2CjzmtIjt2IqQ"
-API_URL = "https://kty-store.onrender.com"
-ADMIN_USERNAME = "ktyofficial169"
-
-STORAGE_ADMIN_CTRL_BOT_TOKEN = "9286576815:AAGW1VCYg8uZDqvGj5zATrnFaUjwghJpmqc"
-STORAGE_BOT_TOKEN = STORAGE_ADMIN_CTRL_BOT_TOKEN
-MEDIA_ADMIN_CTRL_BOT_TOKEN = "9255176136:AAHL3yYdOnqtO26-DvtwzGG4bqQsXHsL8ew"
-TG_GROUP_ID = "-1005852775918"
-
-BOT_DATA_FILE = DATA_FILE
-
-BOT_DEFAULT_DATA = {
-    "banners": [],
-    "games": [],
-    "items": [],
-    "accounts": [],
-    "marketplace_items": [],
-    "allowed_resellers": ["novala16"],
-    "resellers": {},
-    "withdrawals": [],
-    "users": {},
-    "orders": [],
-    "chats": {}
-}
-
-user_states = {}
-
-
-def tg_api(method, payload=None, files=None):
-    url = f"https://api.telegram.org/bot{ADMIN_CTRL_BOT_TOKEN}/{method}"
+def ctrl_tg_api(method, payload=None, files=None):
+    url = f"https://api.telegram.org/bot{CTRL_BOT_TOKEN}/{method}"
     try:
         if files:
             r = requests.post(url, data=payload or {}, files=files, timeout=20)
@@ -1561,11 +1532,11 @@ def tg_api(method, payload=None, files=None):
             r = requests.post(url, json=payload or {}, timeout=20)
         return r.json()
     except Exception as e:
-        print(f"TG API error [{method}]:", e)
+        print(f"Ctrl Bot TG API error [{method}]:", e)
         return {"ok": False, "error": str(e)}
 
 
-def send_msg(chat_id, text, reply_markup=None):
+def ctrl_send_msg(chat_id, text, reply_markup=None):
     body = {
         "chat_id": chat_id,
         "text": text,
@@ -1573,100 +1544,26 @@ def send_msg(chat_id, text, reply_markup=None):
     }
     if reply_markup:
         body["reply_markup"] = reply_markup
-    return tg_api("sendMessage", body)
+    return ctrl_tg_api("sendMessage", body)
 
 
-def answer_cb(cb_id, text=""):
-    return tg_api("answerCallbackQuery", {"callback_query_id": cb_id, "text": text, "show_alert": False})
+def ctrl_answer_cb(cb_id, text=""):
+    return ctrl_tg_api("answerCallbackQuery", {"callback_query_id": cb_id, "text": text, "show_alert": False})
 
 
-def is_authorized_owner(msg_or_cb):
+def ctrl_is_owner(msg_or_cb):
     user = msg_or_cb.get("from") or {}
     uname = str(user.get("username") or "").lstrip("@").strip().lower()
-    return uname == ADMIN_USERNAME.lower()
+    return uname == CTRL_ADMIN_USERNAME.lower()
 
 
-def bot_ensure_schema(d):
-    for k, v in BOT_DEFAULT_DATA.items():
-        d.setdefault(k, json.loads(json.dumps(v)))
-    allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", []) if str(x).strip()]
-    if "novala16" not in allowed:
-        allowed.append("novala16")
-    d["allowed_resellers"] = allowed
-    return d
-
-
-def bot_load_pinned_store_data():
+def ctrl_reupload_photo(file_id_from_ctrl_bot):
     try:
-        res = requests.get(f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=10).json()
-        if res.get("ok"):
-            pinned = (res.get("result") or {}).get("pinned_message") or {}
-            doc = pinned.get("document")
-            if doc and doc.get("file_id"):
-                f_res = requests.get(f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/getFile?file_id={doc['file_id']}", timeout=10).json()
-                if f_res.get("ok"):
-                    fpath = f_res["result"]["file_path"]
-                    raw = requests.get(f"https://api.telegram.org/file/bot{STORAGE_BOT_TOKEN}/{fpath}", timeout=15).json()
-                    if isinstance(raw, dict):
-                        return bot_ensure_schema(raw)
-    except Exception as e:
-        print("Load pinned error:", e)
-    return None
-
-
-def bot_load_store():
-    d = None
-    if os.path.exists(BOT_DATA_FILE):
-        try:
-            with open(BOT_DATA_FILE, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-                if isinstance(raw, dict):
-                    d = ensure_schema(raw)
-        except Exception:
-            d = None
-    if d is None or (not d.get("games") and not d.get("banners") and not d.get("items") and not d.get("accounts")):
-        cloud = bot_load_pinned_store_data()
-        if cloud:
-            d = cloud
-        elif d is None:
-            d = json.loads(json.dumps(BOT_DEFAULT_DATA))
-    return bot_ensure_schema(d)
-
-
-def bot_save_store(d, pin_backup=True):
-    ensure_schema(d)
-    with open(BOT_DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False, indent=2)
-
-    if pin_backup:
-        try:
-            json_bytes = json.dumps(d, ensure_ascii=False, indent=2).encode("utf-8")
-            url = f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/sendDocument"
-            files = {"document": ("store_data.json", json_bytes, "application/json")}
-            data = {
-                "chat_id": TG_GROUP_ID,
-                "caption": f"Bot Sync Store ({time.strftime('%Y-%m-%d %H:%M:%S')})",
-                "disable_notification": True
-            }
-            res = requests.post(url, files=files, data=data, timeout=20).json()
-            if res.get("ok") and res.get("result", {}).get("message_id"):
-                msg_id = res["result"]["message_id"]
-                requests.post(
-                    f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/pinChatMessage",
-                    json={"chat_id": TG_GROUP_ID, "message_id": msg_id, "disable_notification": True},
-                    timeout=10
-                )
-        except Exception as e:
-            print("Pin backup error:", e)
-
-
-def upload_photo_to_media_bot(file_id_from_admin_bot):
-    try:
-        g = tg_api("getFile", {"file_id": file_id_from_admin_bot})
+        g = ctrl_tg_api("getFile", {"file_id": file_id_from_ctrl_bot})
         if not g.get("ok"):
-            return f"{MEDIA_BOT_TOKEN[:8]}:{file_id_from_admin_bot}"
+            return f"{MEDIA_BOT_TOKEN[:8]}:{file_id_from_ctrl_bot}"
         fpath = g["result"]["file_path"]
-        raw = requests.get(f"https://api.telegram.org/file/bot{ADMIN_CTRL_BOT_TOKEN}/{fpath}", timeout=20).content
+        raw = requests.get(f"https://api.telegram.org/file/bot{CTRL_BOT_TOKEN}/{fpath}", timeout=20).content
         url = f"https://api.telegram.org/bot{MEDIA_BOT_TOKEN}/sendPhoto"
         res = requests.post(
             url,
@@ -1678,171 +1575,192 @@ def upload_photo_to_media_bot(file_id_from_admin_bot):
             new_fid = res["result"]["photo"][-1]["file_id"]
             return f"{MEDIA_BOT_TOKEN[:8]}:{new_fid}"
     except Exception as e:
-        print("Reupload photo error:", e)
-    return f"{MEDIA_BOT_TOKEN[:8]}:{file_id_from_admin_bot}"
+        print("Ctrl photo reupload error:", e)
+    return f"{MEDIA_BOT_TOKEN[:8]}:{file_id_from_ctrl_bot}"
 
 
-def main_menu_keyboard():
+def ctrl_main_menu():
     return {
         "inline_keyboard": [
             [
-                {"text": "បង្ហោះហ្គេមថ្មី", "callback_data": "menu_add_game"},
-                {"text": "បង្ហោះ Item ក្នុងហ្គេម", "callback_data": "menu_add_game_item"}
+                {"text": "បង្ហោះហ្គេមថ្មី", "callback_data": "c_add_game"},
+                {"text": "បង្ហោះ Item ក្នុងហ្គេម", "callback_data": "c_add_gitem"}
             ],
             [
-                {"text": "បង្ហោះលក់គណនី", "callback_data": "menu_add_account"},
-                {"text": "បង្ហោះលក់អាយធីម", "callback_data": "menu_add_market_item"}
+                {"text": "បង្ហោះលក់គណនី", "callback_data": "c_add_acc"},
+                {"text": "បង្ហោះលក់អាយធីម", "callback_data": "c_add_mitem"}
             ],
             [
-                {"text": "បង្ហោះ Banner", "callback_data": "menu_add_banner"},
-                {"text": "គ្រប់គ្រង Reseller", "callback_data": "menu_resellers"}
+                {"text": "បង្ហោះ Banner", "callback_data": "c_add_banner"},
+                {"text": "គ្រប់គ្រង Reseller", "callback_data": "c_resellers"}
             ],
             [
-                {"text": "មើលទំនិញ & លុប", "callback_data": "menu_manage_list"},
-                {"text": "ការបញ្ជាទិញ (Orders)", "callback_data": "menu_orders"}
+                {"text": "មើលទំនិញ & លុប", "callback_data": "c_list"},
+                {"text": "ការបញ្ជាទិញ (Orders)", "callback_data": "c_orders"}
             ]
         ]
     }
 
 
-def start_flow(uid, chat_id, flow_name, extra=None):
-    user_states[uid] = {
-        "flow": flow_name,
-        "step": 0,
-        "data": extra or {}
-    }
-    prompt_current_step(uid, chat_id)
+def ctrl_start_flow(uid, chat_id, flow_name, extra=None):
+    ctrl_user_states[uid] = {"flow": flow_name, "step": 0, "data": extra or {}}
+    ctrl_prompt_step(uid, chat_id)
 
 
-def prompt_current_step(uid, chat_id):
-    st = user_states.get(uid)
+def ctrl_prompt_step(uid, chat_id):
+    st = ctrl_user_states.get(uid)
     if not st:
         return
     flow = st["flow"]
     step = st["step"]
     data = st["data"]
-
-    cancel_kb = {"inline_keyboard": [[{"text": "បោះបង់", "callback_data": "cancel_flow"}]]}
+    cancel_kb = {"inline_keyboard": [[{"text": "បោះបង់", "callback_data": "c_cancel"}]]}
 
     if flow == "add_banner":
-        send_msg(chat_id, "<b>បង្ហោះ Banner ថ្មី</b>\nសូមផ្ញើ <b>Link រូបភាព Banner</b> (ទំហំ 16:9):", cancel_kb)
+        ctrl_send_msg(chat_id, "<b>បង្ហោះ Banner ថ្មី</b>\nផ្ញើ <b>Link រូបភាព Banner</b> (16:9):", cancel_kb)
 
     elif flow == "add_game":
         if step == 0:
-            send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (១/៦)</b>\nសូមបញ្ចូល <b>ឈ្មោះហ្គេម</b> (ឧ. Roblox, MLBB, Free Fire):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (១/៦)</b>\nបញ្ចូល <b>ឈ្មោះហ្គេម</b>:", cancel_kb)
         elif step == 1:
-            send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (២/៦)</b>\nសូមផ្ញើ <b>Link រូបភាព Logo ហ្គេម</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (២/៦)</b>\nផ្ញើ <b>Link រូបភាព Logo ហ្គេម</b> (ឬ <code>skip</code>):", cancel_kb)
         elif step == 2:
-            send_msg(
-                chat_id,
-                "<b>បង្ហោះហ្គេមថ្មី (៣/៦)</b>\nតើត្រូវបើក <b>ប្រអប់សរសេរទី ១</b> (User ID / Username) ទេ?\nវាយ <code>yes</code> ឬ <code>no</code>:",
-                cancel_kb
-            )
+            ctrl_send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (៣/៦)</b>\nបើក <b>ប្រអប់សរសេរទី ១</b> ទេ? វាយ <code>yes</code> ឬ <code>no</code>:", cancel_kb)
         elif step == 3:
             if not data.get("input1_enabled"):
                 st["step"] = 4
-                prompt_current_step(uid, chat_id)
+                ctrl_prompt_step(uid, chat_id)
                 return
-            send_msg(chat_id, "សូមបញ្ចូល <b>ចំណងជើងប្រអប់ទី ១</b> (ឧ. Roblox Username ឬ User ID):", cancel_kb)
+            ctrl_send_msg(chat_id, "បញ្ចូល <b>ចំណងជើងប្រអប់ទី ១</b>:", cancel_kb)
         elif step == 31:
-            send_msg(chat_id, "សូមបញ្ចូល <b>អក្សរគំរូ (Placeholder) ប្រអប់ទី ១</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+            ctrl_send_msg(chat_id, "បញ្ចូល <b>អក្សរគំរូ (Placeholder) ប្រអប់ទី ១</b> (ឬ <code>skip</code>):", cancel_kb)
         elif step == 4:
-            send_msg(
-                chat_id,
-                "<b>បង្ហោះហ្គេមថ្មី (៤/៦)</b>\nតើត្រូវបើក <b>ប្រអប់សរសេរទី ២</b> (Server ID / Zone ID) ទេ?\nវាយ <code>yes</code> ឬ <code>no</code>:",
-                cancel_kb
-            )
+            ctrl_send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (៤/៦)</b>\nបើក <b>ប្រអប់សរសេរទី ២</b> ទេ? វាយ <code>yes</code> ឬ <code>no</code>:", cancel_kb)
         elif step == 5:
             if not data.get("input2_enabled"):
                 st["step"] = 6
-                prompt_current_step(uid, chat_id)
+                ctrl_prompt_step(uid, chat_id)
                 return
-            send_msg(chat_id, "សូមបញ្ចូល <b>ចំណងជើងប្រអប់ទី ២</b> (ឧ. Server ID / Zone ID):", cancel_kb)
+            ctrl_send_msg(chat_id, "បញ្ចូល <b>ចំណងជើងប្រអប់ទី ២</b>:", cancel_kb)
         elif step == 51:
-            send_msg(chat_id, "សូមបញ្ចូល <b>អក្សរគំរូ (Placeholder) ប្រអប់ទី ២</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+            ctrl_send_msg(chat_id, "បញ្ចូល <b>អក្សរគំរូ (Placeholder) ប្រអប់ទី ២</b> (ឬ <code>skip</code>):", cancel_kb)
         elif step == 6:
-            send_msg(
-                chat_id,
-                "<b>បង្ហោះហ្គេមថ្មី (៦/៦)</b>\nសូមបញ្ចូល <b>អក្សរណែនាំខាងក្រោមប្រអប់បំពេញព័ត៌មាន</b> (ឬវាយ <code>skip</code>):",
-                cancel_kb
-            )
+            ctrl_send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (៦/៦)</b>\nបញ្ចូល <b>អក្សរណែនាំ</b> (ឬ <code>skip</code>):", cancel_kb)
 
     elif flow == "add_game_item":
-        d = bot_load_store()
+        d = load_data()
         if step == 0:
             games = d.get("games", [])
             if not games:
-                user_states.pop(uid, None)
-                send_msg(chat_id, "មិនទាន់មានហ្គេមណាមួយទេ! សូមបង្ហោះហ្គេមជាមុនសិន។", main_menu_keyboard())
+                ctrl_user_states.pop(uid, None)
+                ctrl_send_msg(chat_id, "មិនទាន់មានហ្គេមទេ! សូមបង្ហោះហ្គេមជាមុនសិន។", ctrl_main_menu())
                 return
-            kb_rows = []
-            for g in games:
-                kb_rows.append([{"text": f"Game: {g['name']}", "callback_data": f"pick_game_for_item:{g['id']}"}])
-            kb_rows.append([{"text": "បោះបង់", "callback_data": "cancel_flow"}])
-            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item ក្នុងហ្គេម (១/៤)</b>\nជ្រើសរើសហ្គេម៖", {"inline_keyboard": kb_rows})
+            rows = [[{"text": f"Game: {g['name']}", "callback_data": f"c_pick_g:{g['id']}"}] for g in games]
+            rows.append([{"text": "បោះបង់", "callback_data": "c_cancel"}])
+            ctrl_send_msg(chat_id, "<b>បង្ហោះ Item ក្នុងហ្គេម (១/៤)</b>\nជ្រើសរើសហ្គេម៖", {"inline_keyboard": rows})
         elif step == 1:
-            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item (២/៤)</b>\nសូមបញ្ចូល <b>ឈ្មោះកញ្ចប់ Item</b> (ឧ. 80 Robux):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះ Item ក្នុងហ្គេម (២/៤)</b>\nបញ្ចូល <b>ឈ្មោះកញ្ចប់ Item</b>:", cancel_kb)
         elif step == 2:
-            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item (៣/៤)</b>\nសូមបញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 1.00):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះ Item ក្នុងហ្គេម (៣/៤)</b>\nបញ្ចូល <b>តម្លៃ ($ USD)</b>:", cancel_kb)
         elif step == 3:
-            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item (៤/៤)</b>\nសូមផ្ញើ <b>Link រូបភាព Item</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះ Item ក្នុងហ្គេម (៤/៤)</b>\nផ្ញើ <b>Link រូបភាព Item</b> (ឬ <code>skip</code>):", cancel_kb)
 
     elif flow == "add_account":
         if step == 0:
-            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (១/៧)</b>\nសូមបញ្ចូល <b>ប្រភេទហ្គេម</b> (ឧ. Roblox, MLBB, Free Fire):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់គណនី (១/៧)</b>\nបញ្ចូល <b>ប្រភេទហ្គេម</b> (ឧ. Roblox):", cancel_kb)
         elif step == 1:
-            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (២/៧)</b>\nសូមបញ្ចូល <b>ឈ្មោះគណនី / ចំណងជើងលក់</b>:", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់គណនី (២/៧)</b>\nបញ្ចូល <b>ឈ្មោះគណនី / ចំណងជើង</b>:", cancel_kb)
         elif step == 2:
-            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៣/៧)</b>\nសូមបញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 5.00):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៣/៧)</b>\nបញ្ចូល <b>តម្លៃ ($ USD)</b>:", cancel_kb)
         elif step == 3:
-            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៤/៧)</b>\nសូមបញ្ចូល <b>ចំនួនស្តុក</b> (ឧ. 1):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៤/៧)</b>\nបញ្ចូល <b>ចំនួនស្តុក</b>:", cancel_kb)
         elif step == 4:
-            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៥/៧)</b>\nសូមបញ្ចូល <b>ព័ត៌មានលម្អិតអំពីគណនី</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៥/៧)</b>\nបញ្ចូល <b>ព័ត៌មានលម្អិត</b> (ឬ <code>skip</code>):", cancel_kb)
         elif step == 5:
-            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៦/៧)</b>\nសូមបញ្ចូល <b>Gmail ឬ Username គណនីហ្គេម</b>:", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៦/៧)</b>\nបញ្ចូល <b>Gmail ឬ Username គណនី</b>:", cancel_kb)
         elif step == 6:
-            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៧/៧)</b>\nសូមបញ្ចូល <b>ពាក្យសម្ងាត់ (Password)</b> គណនី:", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៧/៧)</b>\nបញ្ចូល <b>Password គណនី</b>:", cancel_kb)
         elif step == 7:
             kb = {
                 "inline_keyboard": [
-                    [{"text": "រួចរាល់ / បង្ហោះឥឡូវនេះ", "callback_data": "finish_account_upload"}],
-                    [{"text": "បោះបង់", "callback_data": "cancel_flow"}]
+                    [{"text": "រួចរាល់ / បង្ហោះឥឡូវនេះ", "callback_data": "c_done_acc"}],
+                    [{"text": "បោះបង់", "callback_data": "c_cancel"}]
                 ]
             }
             cnt = len(data.get("images", []))
-            send_msg(
-                chat_id,
-                f"<b>ផ្ញើរូបភាពគណនី (បានផ្ញើ៖ {cnt}/10 រូប)</b>\nផ្ញើរូបភាពចូលឆាតនេះ រួចចុច <b>រួចរាល់ / បង្ហោះឥឡូវនេះ</b> (ឬវាយ <code>skip</code>)។",
-                kb
-            )
+            ctrl_send_msg(chat_id, f"<b>ផ្ញើរូបភាពគណនី ({cnt}/10 រូប)</b>\nផ្ញើរូបភាពរួចចុច <b>រួចរាល់ / បង្ហោះឥឡូវនេះ</b> (ឬ <code>skip</code>):", kb)
 
     elif flow == "add_market_item":
         if step == 0:
-            send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (១/៤)</b>\nសូមបញ្ចូល <b>ឈ្មោះ Item</b> (ឧ. x20 Dragon Breath):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (១/៤)</b>\nបញ្ចូល <b>ឈ្មោះ Item</b>:", cancel_kb)
         elif step == 1:
-            send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (២/៤)</b>\nសូមបញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 1.20):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (២/៤)</b>\nបញ្ចូល <b>តម្លៃ ($ USD)</b>:", cancel_kb)
         elif step == 2:
-            send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (៣/៤)</b>\nសូមបញ្ចូល <b>ចំនួនស្តុក</b> (ឧ. 5):", cancel_kb)
+            ctrl_send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (៣/៤)</b>\nបញ្ចូល <b>ចំនួនស្តុក</b>:", cancel_kb)
         elif step == 3:
             kb = {
                 "inline_keyboard": [
-                    [{"text": "រួចរាល់ / បង្ហោះ Item ឥឡូវនេះ", "callback_data": "finish_market_item_upload"}],
-                    [{"text": "បោះបង់", "callback_data": "cancel_flow"}]
+                    [{"text": "រួចរាល់ / បង្ហោះ Item ឥឡូវនេះ", "callback_data": "c_done_mitem"}],
+                    [{"text": "បោះបង់", "callback_data": "c_cancel"}]
                 ]
             }
             cnt = len(data.get("images", []))
-            send_msg(
-                chat_id,
-                f"<b>ផ្ញើរូបភាព Item (បានផ្ញើ៖ {cnt}/10 រូប)</b>\nផ្ញើរូបភាពចូលឆាតនេះ រួចចុច <b>រួចរាល់ / បង្ហោះ Item ឥឡូវនេះ</b> (ឬវាយ <code>skip</code>)។",
-                kb
-            )
+            ctrl_send_msg(chat_id, f"<b>ផ្ញើរូបភាព Item ({cnt}/10 រូប)</b>\nផ្ញើរូបភាពរួចចុច <b>រួចរាល់ / បង្ហោះ Item ឥឡូវនេះ</b> (ឬ <code>skip</code>):", kb)
 
     elif flow == "add_reseller":
-        send_msg(chat_id, "<b>បន្ថែមអ្នកលក់បន្ត (Reseller)</b>\nសូមបញ្ចូល <b>Telegram Username</b> (ឧ. @novala16):", cancel_kb)
+        ctrl_send_msg(chat_id, "<b>បន្ថែម Reseller</b>\nបញ្ចូល <b>Telegram Username</b> (ឧ. @novala16):", cancel_kb)
 
 
-def handle_text_step(uid, chat_id, text):
-    st = user_states.get(uid)
+def ctrl_finish_acc(uid, chat_id):
+    st = ctrl_user_states.pop(uid, None) or {}
+    data = st.get("data") or {}
+    d = load_data()
+    imgs = (data.get("images") or [])[:10]
+    acc_obj = {
+        "id": f"acc_{int(time.time())}",
+        "title": data.get("title", "Account"),
+        "game_name": data.get("game_name", "Roblox"),
+        "price": data.get("price", 1.0),
+        "stock": data.get("stock", 1),
+        "description": data.get("description", ""),
+        "acc_login": data.get("acc_login", ""),
+        "acc_password": data.get("acc_password", ""),
+        "images": imgs,
+        "seller_id": "",
+        "seller_name": ""
+    }
+    d["accounts"].append(acc_obj)
+    save_data(d)
+    backup_store_to_telegram(d, pin_it=True)
+    ctrl_send_msg(chat_id, f"បានបង្ហោះគណនី <b>{acc_obj['title']}</b> (${acc_obj['price']:.2f}) រួចរាល់!", ctrl_main_menu())
+
+
+def ctrl_finish_mitem(uid, chat_id):
+    st = ctrl_user_states.pop(uid, None) or {}
+    data = st.get("data") or {}
+    d = load_data()
+    imgs = (data.get("images") or [])[:10]
+    first_img = imgs[0] if imgs else ""
+    m_obj = {
+        "id": f"ritem_{int(time.time())}_{uuid.uuid4().hex[:4]}",
+        "name": data.get("name", "Item"),
+        "game_name": "Roblox",
+        "price": data.get("price", 1.0),
+        "stock": data.get("stock", 1),
+        "description": "",
+        "image": first_img,
+        "images": imgs,
+        "seller_id": "",
+        "seller_name": ""
+    }
+    d.setdefault("marketplace_items", []).append(m_obj)
+    save_data(d)
+    backup_store_to_telegram(d, pin_it=True)
+    ctrl_send_msg(chat_id, f"បានបង្ហោះអាយធីម <b>{m_obj['name']}</b> (${m_obj['price']:.2f}) រួចរាល់!", ctrl_main_menu())
+
+
+def ctrl_handle_text(uid, chat_id, text):
+    st = ctrl_user_states.get(uid)
     if not st:
         return False
     flow = st["flow"]
@@ -1851,11 +1769,12 @@ def handle_text_step(uid, chat_id, text):
     low = text.strip().lower()
 
     if flow == "add_banner":
-        d = bot_load_store()
+        d = load_data()
         d["banners"].append(text.strip())
-        bot_save_store(d, pin_backup=True)
-        user_states.pop(uid, None)
-        send_msg(chat_id, "បានបន្ថែម Banner រួចរាល់!", main_menu_keyboard())
+        save_data(d)
+        backup_store_to_telegram(d, pin_it=True)
+        ctrl_user_states.pop(uid, None)
+        ctrl_send_msg(chat_id, "បានបន្ថែម Banner រួចរាល់!", ctrl_main_menu())
         return True
 
     if flow == "add_game":
@@ -1885,7 +1804,7 @@ def handle_text_step(uid, chat_id, text):
             st["step"] = 6
         elif step == 6:
             data["input_note"] = "" if low == "skip" else text.strip()
-            d = bot_load_store()
+            d = load_data()
             game_obj = {
                 "id": "game_" + str(int(time.time())),
                 "name": data.get("name", "Game"),
@@ -1899,12 +1818,12 @@ def handle_text_step(uid, chat_id, text):
                 "input_note": data.get("input_note", "")
             }
             d["games"].append(game_obj)
-            bot_save_store(d, pin_backup=True)
-            user_states.pop(uid, None)
-            send_msg(chat_id, f"បានបង្ហោះហ្គេម <b>{game_obj['name']}</b> រួចរាល់!", main_menu_keyboard())
+            save_data(d)
+            backup_store_to_telegram(d, pin_it=True)
+            ctrl_user_states.pop(uid, None)
+            ctrl_send_msg(chat_id, f"បានបង្ហោះហ្គេម <b>{game_obj['name']}</b> រួចរាល់!", ctrl_main_menu())
             return True
-
-        prompt_current_step(uid, chat_id)
+        ctrl_prompt_step(uid, chat_id)
         return True
 
     if flow == "add_game_item":
@@ -1915,16 +1834,16 @@ def handle_text_step(uid, chat_id, text):
             try:
                 val = float(text.strip())
                 if val <= 0:
-                    send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
+                    ctrl_send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
                     return True
                 data["price"] = round(val, 2)
                 st["step"] = 3
             except Exception:
-                send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 1.00):")
+                ctrl_send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 1.00):")
                 return True
         elif step == 3:
             img = "" if low == "skip" else text.strip()
-            d = bot_load_store()
+            d = load_data()
             item_obj = {
                 "id": "item_" + str(int(time.time())),
                 "game_id": data.get("game_id"),
@@ -1933,12 +1852,12 @@ def handle_text_step(uid, chat_id, text):
                 "image": img or "https://cdn-icons-png.flaticon.com/512/616/616490.png"
             }
             d["items"].append(item_obj)
-            bot_save_store(d, pin_backup=True)
-            user_states.pop(uid, None)
-            send_msg(chat_id, f"បានបង្ហោះកញ្ចប់ Item <b>{item_obj['name']}</b> (${item_obj['price']:.2f}) រួចរាល់!", main_menu_keyboard())
+            save_data(d)
+            backup_store_to_telegram(d, pin_it=True)
+            ctrl_user_states.pop(uid, None)
+            ctrl_send_msg(chat_id, f"បានបង្ហោះ Item <b>{item_obj['name']}</b> (${item_obj['price']:.2f}) រួចរាល់!", ctrl_main_menu())
             return True
-
-        prompt_current_step(uid, chat_id)
+        ctrl_prompt_step(uid, chat_id)
         return True
 
     if flow == "add_account":
@@ -1952,19 +1871,19 @@ def handle_text_step(uid, chat_id, text):
             try:
                 val = float(text.strip())
                 if val <= 0:
-                    send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
+                    ctrl_send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
                     return True
                 data["price"] = round(val, 2)
                 st["step"] = 3
             except Exception:
-                send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 5.00):")
+                ctrl_send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 5.00):")
                 return True
         elif step == 3:
             try:
                 data["stock"] = max(0, int(text.strip()))
                 st["step"] = 4
             except Exception:
-                send_msg(chat_id, "សូមបញ្ចូលចំនួនស្តុកជាលេខគត់ (ឧ. 1):")
+                ctrl_send_msg(chat_id, "សូមបញ្ចូលស្តុកជាលេខគត់:")
                 return True
         elif step == 4:
             data["description"] = "" if low == "skip" else text.strip()
@@ -1977,9 +1896,9 @@ def handle_text_step(uid, chat_id, text):
             data["images"] = []
             st["step"] = 7
         elif step == 7 and low == "skip":
-            return finalize_account_post(uid, chat_id)
-
-        prompt_current_step(uid, chat_id)
+            ctrl_finish_acc(uid, chat_id)
+            return True
+        ctrl_prompt_step(uid, chat_id)
         return True
 
     if flow == "add_market_item":
@@ -1990,12 +1909,12 @@ def handle_text_step(uid, chat_id, text):
             try:
                 val = float(text.strip())
                 if val <= 0:
-                    send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
+                    ctrl_send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
                     return True
                 data["price"] = round(val, 2)
                 st["step"] = 2
             except Exception:
-                send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 1.20):")
+                ctrl_send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 1.20):")
                 return True
         elif step == 2:
             try:
@@ -2003,273 +1922,197 @@ def handle_text_step(uid, chat_id, text):
                 data["images"] = []
                 st["step"] = 3
             except Exception:
-                send_msg(chat_id, "សូមបញ្ចូលចំនួនស្តុកជាលេខគត់ (ឧ. 5):")
+                ctrl_send_msg(chat_id, "សូមបញ្ចូលស្តុកជាលេខគត់:")
                 return True
         elif step == 3 and low == "skip":
-            return finalize_market_item_post(uid, chat_id)
-
-        prompt_current_step(uid, chat_id)
+            ctrl_finish_mitem(uid, chat_id)
+            return True
+        ctrl_prompt_step(uid, chat_id)
         return True
 
     if flow == "add_reseller":
         uname = text.strip().lstrip("@").strip().lower()
         if not uname:
-            send_msg(chat_id, "សូមបញ្ចូល Username ឱ្យត្រឹមត្រូវ:")
+            ctrl_send_msg(chat_id, "សូមបញ្ចូល Username ឱ្យត្រឹមត្រូវ:")
             return True
-        d = bot_load_store()
+        d = load_data()
         allowed = d.setdefault("allowed_resellers", [])
         if uname not in allowed:
             allowed.append(uname)
-        bot_save_store(d, pin_backup=True)
-        user_states.pop(uid, None)
-        send_msg(chat_id, f"បានផ្តល់សិទ្ធិ Reseller ជូន <b>@{uname}</b> រួចរាល់!", main_menu_keyboard())
+        save_data(d)
+        backup_store_to_telegram(d, pin_it=True)
+        ctrl_user_states.pop(uid, None)
+        ctrl_send_msg(chat_id, f"បានផ្តល់សិទ្ធិ Reseller ជូន <b>@{uname}</b> រួចរាល់!", ctrl_main_menu())
         return True
 
     return False
 
 
-def finalize_account_post(uid, chat_id):
-    st = user_states.pop(uid, None) or {}
-    data = st.get("data") or {}
-    d = bot_load_store()
-    imgs = (data.get("images") or [])[:10]
-    acc_obj = {
-        "id": f"acc_{int(time.time())}",
-        "title": data.get("title", "Account"),
-        "game_name": data.get("game_name", "Roblox"),
-        "price": data.get("price", 1.0),
-        "stock": data.get("stock", 1),
-        "description": data.get("description", ""),
-        "acc_login": data.get("acc_login", ""),
-        "acc_password": data.get("acc_password", ""),
-        "images": imgs,
-        "seller_id": "",
-        "seller_name": ""
-    }
-    d["accounts"].append(acc_obj)
-    bot_save_store(d, pin_backup=True)
-    send_msg(
-        chat_id,
-        f"<b>បានបង្ហោះលក់គណនីរួចរាល់!</b>\n"
-        f"• ហ្គេម៖ <b>{acc_obj['game_name']}</b>\n"
-        f"• ឈ្មោះ៖ <b>{acc_obj['title']}</b>\n"
-        f"• តម្លៃ៖ <b>${acc_obj['price']:.2f}</b> | ស្តុក៖ <b>{acc_obj['stock']}</b>",
-        main_menu_keyboard()
-    )
-    return True
-
-
-def finalize_market_item_post(uid, chat_id):
-    st = user_states.pop(uid, None) or {}
-    data = st.get("data") or {}
-    d = bot_load_store()
-    imgs = (data.get("images") or [])[:10]
-    first_img = imgs[0] if imgs else ""
-    m_obj = {
-        "id": f"ritem_{int(time.time())}_{uuid.uuid4().hex[:4]}",
-        "name": data.get("name", "Item"),
-        "game_name": "Roblox",
-        "price": data.get("price", 1.0),
-        "stock": data.get("stock", 1),
-        "description": "",
-        "image": first_img,
-        "images": imgs,
-        "seller_id": "",
-        "seller_name": ""
-    }
-    d.setdefault("marketplace_items", []).append(m_obj)
-    bot_save_store(d, pin_backup=True)
-    send_msg(
-        chat_id,
-        f"<b>បានបង្ហោះលក់អាយធីមរួចរាល់!</b>\n"
-        f"• ឈ្មោះ Item៖ <b>{m_obj['name']}</b>\n"
-        f"• តម្លៃ៖ <b>${m_obj['price']:.2f}</b> | ស្តុក៖ <b>{m_obj['stock']}</b>",
-        main_menu_keyboard()
-    )
-    return True
-
-
-def handle_photo_step(uid, chat_id, msg):
-    st = user_states.get(uid)
+def ctrl_handle_photo(uid, chat_id, msg):
+    st = ctrl_user_states.get(uid)
     if not st or st["flow"] not in ("add_account", "add_market_item") or st["step"] not in (7, 3):
         return False
     photos = msg.get("photo") or []
     if not photos:
         return False
-    raw_fid = photos[-1]["file_id"]
-    encoded_fid = upload_photo_to_media_bot(raw_fid)
+    encoded = ctrl_reupload_photo(photos[-1]["file_id"])
     imgs = st["data"].setdefault("images", [])
     if len(imgs) < 10:
-        imgs.append(encoded_fid)
-    prompt_current_step(uid, chat_id)
+        imgs.append(encoded)
+    ctrl_prompt_step(uid, chat_id)
     return True
 
 
-def handle_callback(cb):
-    if not is_authorized_owner(cb):
-        answer_cb(cb["id"])
+def ctrl_handle_callback(cb):
+    if not ctrl_is_owner(cb):
+        ctrl_answer_cb(cb["id"])
         return
-
-    cb_id = cb["id"]
     msg = cb.get("message") or {}
     chat_id = (msg.get("chat") or {}).get("id")
     uid = str((cb.get("from") or {}).get("id") or "")
     data_str = cb.get("data") or ""
+    ctrl_answer_cb(cb["id"])
 
-    answer_cb(cb_id)
-
-    if data_str == "cancel_flow":
-        user_states.pop(uid, None)
-        send_msg(chat_id, "បានបោះបង់។", main_menu_keyboard())
-        return
-
-    if data_str == "menu_add_game":
-        start_flow(uid, chat_id, "add_game")
-    elif data_str == "menu_add_game_item":
-        start_flow(uid, chat_id, "add_game_item")
-    elif data_str == "menu_add_account":
-        start_flow(uid, chat_id, "add_account")
-    elif data_str == "menu_add_market_item":
-        start_flow(uid, chat_id, "add_market_item")
-    elif data_str == "menu_add_banner":
-        start_flow(uid, chat_id, "add_banner")
-    elif data_str == "finish_account_upload":
-        finalize_account_post(uid, chat_id)
-    elif data_str == "finish_market_item_upload":
-        finalize_market_item_post(uid, chat_id)
-    elif data_str.startswith("pick_game_for_item:"):
+    if data_str == "c_cancel":
+        ctrl_user_states.pop(uid, None)
+        ctrl_send_msg(chat_id, "បានបោះបង់។", ctrl_main_menu())
+    elif data_str == "c_add_game":
+        ctrl_start_flow(uid, chat_id, "add_game")
+    elif data_str == "c_add_gitem":
+        ctrl_start_flow(uid, chat_id, "add_game_item")
+    elif data_str == "c_add_acc":
+        ctrl_start_flow(uid, chat_id, "add_account")
+    elif data_str == "c_add_mitem":
+        ctrl_start_flow(uid, chat_id, "add_market_item")
+    elif data_str == "c_add_banner":
+        ctrl_start_flow(uid, chat_id, "add_banner")
+    elif data_str == "c_done_acc":
+        ctrl_finish_acc(uid, chat_id)
+    elif data_str == "c_done_mitem":
+        ctrl_finish_mitem(uid, chat_id)
+    elif data_str.startswith("c_pick_g:"):
         gid = data_str.split(":", 1)[1]
-        if uid in user_states:
-            user_states[uid]["data"]["game_id"] = gid
-            user_states[uid]["step"] = 1
-            prompt_current_step(uid, chat_id)
-    elif data_str == "menu_resellers":
-        d = bot_load_store()
+        if uid in ctrl_user_states:
+            ctrl_user_states[uid]["data"]["game_id"] = gid
+            ctrl_user_states[uid]["step"] = 1
+            ctrl_prompt_step(uid, chat_id)
+    elif data_str == "c_resellers":
+        d = load_data()
         allowed = d.get("allowed_resellers", [])
-        txt = "<b>បញ្ជី Reseller ដែលបានអនុញ្ញាត៖</b>\n" + ("\n".join(f"• @{u}" for u in allowed) if allowed else "• មិនទាន់មាន")
-        kb = {
-            "inline_keyboard": [
-                [{"text": "បន្ថែម Reseller", "callback_data": "action_add_reseller"}],
-                [{"text": "ត្រឡប់ទៅម៉ឺនុយដើម", "callback_data": "back_main"}]
-            ]
-        }
-        send_msg(chat_id, txt, kb)
-    elif data_str == "action_add_reseller":
-        start_flow(uid, chat_id, "add_reseller")
-    elif data_str == "menu_manage_list":
-        d = bot_load_store()
-        lines = ["<b>ទំនិញដែលកំពុងដាក់លក់៖</b>"]
+        txt = "<b>Reseller ដែលបានអនុញ្ញាត៖</b>\n" + ("\n".join(f"• @{u}" for u in allowed) if allowed else "• មិនទាន់មាន")
+        kb = {"inline_keyboard": [[{"text": "បន្ថែម Reseller", "callback_data": "c_add_res"}], [{"text": "ម៉ឺនុយដើម", "callback_data": "c_back"}]]}
+        ctrl_send_msg(chat_id, txt, kb)
+    elif data_str == "c_add_res":
+        ctrl_start_flow(uid, chat_id, "add_reseller")
+    elif data_str == "c_list":
+        d = load_data()
+        lines = ["<b>ទំនិញក្នុងហាង៖</b>"]
         kb = []
         for g in d.get("games", []):
             lines.append(f"Game: {g['name']}")
-            kb.append([{"text": f"លុប Game: {g['name']}", "callback_data": f"del_game:{g['id']}"}])
+            kb.append([{"text": f"លុប Game: {g['name']}", "callback_data": f"c_del_g:{g['id']}"}])
         for a in d.get("accounts", []):
-            lines.append(f"Account: {a['title']} (${a['price']})")
-            kb.append([{"text": f"លុប Account: {a['title'][:20]}", "callback_data": f"del_acc:{a['id']}"}])
+            lines.append(f"Acc: {a['title']} (${a['price']})")
+            kb.append([{"text": f"លុប Acc: {a['title'][:18]}", "callback_data": f"c_del_a:{a['id']}"}])
         for m in d.get("marketplace_items", []):
             lines.append(f"Item: {m['name']} (${m['price']})")
-            kb.append([{"text": f"លុប Item: {m['name'][:20]}", "callback_data": f"del_mitem:{m['id']}"}])
-        kb.append([{"text": "ត្រឡប់ទៅម៉ឺនុយដើម", "callback_data": "back_main"}])
-        send_msg(chat_id, "\n".join(lines), {"inline_keyboard": kb})
-    elif data_str.startswith("del_game:"):
+            kb.append([{"text": f"លុប Item: {m['name'][:18]}", "callback_data": f"c_del_m:{m['id']}"}])
+        kb.append([{"text": "ម៉ឺនុយដើម", "callback_data": "c_back"}])
+        ctrl_send_msg(chat_id, "\n".join(lines), {"inline_keyboard": kb})
+    elif data_str.startswith("c_del_g:"):
         gid = data_str.split(":", 1)[1]
-        d = bot_load_store()
+        d = load_data()
         d["games"] = [x for x in d.get("games", []) if x["id"] != gid]
         d["items"] = [x for x in d.get("items", []) if x.get("game_id") != gid]
-        bot_save_store(d, pin_backup=True)
-        send_msg(chat_id, "បានលុបហ្គេមរួចរាល់!", main_menu_keyboard())
-    elif data_str.startswith("del_acc:"):
+        save_data(d)
+        backup_store_to_telegram(d, pin_it=True)
+        ctrl_send_msg(chat_id, "បានលុបហ្គេមរួចរាល់!", ctrl_main_menu())
+    elif data_str.startswith("c_del_a:"):
         aid = data_str.split(":", 1)[1]
-        d = bot_load_store()
+        d = load_data()
         d["accounts"] = [x for x in d.get("accounts", []) if x["id"] != aid]
-        bot_save_store(d, pin_backup=True)
-        send_msg(chat_id, "បានលុបគណនីរួចរាល់!", main_menu_keyboard())
-    elif data_str.startswith("del_mitem:"):
+        save_data(d)
+        backup_store_to_telegram(d, pin_it=True)
+        ctrl_send_msg(chat_id, "បានលុបគណនីរួចរាល់!", ctrl_main_menu())
+    elif data_str.startswith("c_del_m:"):
         mid = data_str.split(":", 1)[1]
-        d = bot_load_store()
+        d = load_data()
         d["marketplace_items"] = [x for x in d.get("marketplace_items", []) if x["id"] != mid]
-        bot_save_store(d, pin_backup=True)
-        send_msg(chat_id, "បានលុបអាយធីមរួចរាល់!", main_menu_keyboard())
-    elif data_str == "menu_orders":
-        d = bot_load_store()
+        save_data(d)
+        backup_store_to_telegram(d, pin_it=True)
+        ctrl_send_msg(chat_id, "បានលុបអាយធីមរួចរាល់!", ctrl_main_menu())
+    elif data_str == "c_orders":
+        d = load_data()
         orders = list(reversed(d.get("orders", [])))[:8]
         if not orders:
-            send_msg(chat_id, "មិនទាន់មានការបញ្ជាទិញនៅឡើយទេ។", main_menu_keyboard())
+            ctrl_send_msg(chat_id, "មិនទាន់មានការបញ្ជាទិញទេ។", ctrl_main_menu())
             return
-        lines = ["<b>ការបញ្ជាទិញចុងក្រោយ៖</b>"]
-        for o in orders:
-            lines.append(f"• <code>{o.get('bill_number')}</code> | {o.get('item_name')} (${o.get('amount')}) | {o.get('status')}")
-        send_msg(chat_id, "\n".join(lines), main_menu_keyboard())
-    elif data_str == "back_main":
-        user_states.pop(uid, None)
-        send_msg(chat_id, "<b>ផ្ទាំងបញ្ជា @ktyofficial169</b>", main_menu_keyboard())
+        lines = ["<b>ការបញ្ជាទិញចុងក្រោយ៖</b>"] + [f"• <code>{o.get('bill_number')}</code> | {o.get('item_name')} (${o.get('amount')}) | {o.get('status')}" for o in orders]
+        ctrl_send_msg(chat_id, "\n".join(lines), ctrl_main_menu())
+    elif data_str == "c_back":
+        ctrl_user_states.pop(uid, None)
+        ctrl_send_msg(chat_id, "<b>ផ្ទាំងបញ្ជា @ktyofficial169</b>", ctrl_main_menu())
 
 
-def handle_message(msg):
-    if not is_authorized_owner(msg):
+def ctrl_handle_message(msg):
+    if not ctrl_is_owner(msg):
         return
-
     chat_id = (msg.get("chat") or {}).get("id")
     uid = str((msg.get("from") or {}).get("id") or "")
     if not chat_id or not uid:
         return
-
-    if handle_photo_step(uid, chat_id, msg):
+    if ctrl_handle_photo(uid, chat_id, msg):
         return
-
     text = (msg.get("text") or "").strip()
     if not text:
         return
-
     if text in ("/start", "/menu", "/cancel"):
-        user_states.pop(uid, None)
-        send_msg(
-            chat_id,
-            "<b>សួស្តី @ktyofficial169!</b>\nជ្រើសរើសមុខងារដែលអ្នកចង់បញ្ជា៖",
-            main_menu_keyboard()
-        )
+        ctrl_user_states.pop(uid, None)
+        ctrl_send_msg(chat_id, "<b>សួស្តី @ktyofficial169!</b>\nជ្រើសរើសមុខងារដើម្បីបញ្ជា៖", ctrl_main_menu())
         return
-
-    if handle_text_step(uid, chat_id, text):
+    if ctrl_handle_text(uid, chat_id, text):
         return
+    ctrl_send_msg(chat_id, "<b>ផ្ទាំងបញ្ជាសម្រាប់ @ktyofficial169 ប៉ុណ្ណោះ៖</b>", ctrl_main_menu())
 
-    send_msg(chat_id, "<b>ម៉ឺនុយគ្រប់គ្រងសម្រាប់ @ktyofficial169 ប៉ុណ្ណោះ៖</b>", main_menu_keyboard())
 
-
-def run_bot():
-    print(f"Starting Admin Bot restricted strictly to @{ADMIN_USERNAME}...")
+def ctrl_poll_loop():
+    ctrl_tg_api("deleteWebhook", {"drop_pending_updates": False})
     offset = 0
     while True:
         try:
-            res = tg_api("getUpdates", {"offset": offset, "timeout": 25})
+            res = ctrl_tg_api("getUpdates", {"offset": offset, "timeout": 25})
             if res.get("ok"):
                 for upd in res.get("result", []):
                     offset = upd["update_id"] + 1
                     if "message" in upd:
-                        handle_message(upd["message"])
+                        ctrl_handle_message(upd["message"])
                     elif "callback_query" in upd:
-                        handle_callback(upd["callback_query"])
+                        ctrl_handle_callback(upd["callback_query"])
         except Exception as e:
-            print("Poll loop error:", e)
+            print("Ctrl bot poll error:", e)
             time.sleep(3)
 
 
+_ctrl_thread_started = False
+_ctrl_thread_lock = threading.Lock()
 
-import threading
 
-_admin_bot_started = False
-_admin_bot_lock = threading.Lock()
+def ensure_ctrl_bot_running():
+    global _ctrl_thread_started
+    with _ctrl_thread_lock:
+        if not _ctrl_thread_started:
+            _ctrl_thread_started = True
+            threading.Thread(target=ctrl_poll_loop, daemon=True, name="CtrlAdminBotThread").start()
 
-def start_admin_bot_background():
-    global _admin_bot_started
-    with _admin_bot_lock:
-        if _admin_bot_started:
-            return
-        _admin_bot_started = True
-        t = threading.Thread(target=run_bot, daemon=True, name="KtyAdminBotThread")
-        t.start()
 
-start_admin_bot_background()
+ensure_ctrl_bot_running()
+
+
+@app.before_request
+def _kickoff_ctrl_bot():
+    ensure_ctrl_bot_running()
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
