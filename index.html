@@ -452,30 +452,26 @@
         .stat-label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
         .stat-val { font-size: 18px; font-weight: 800; color: #34d399; }
 
-        /* Compact Small Square Upload Box (ការ៉េបួនជ្រុងតូចល្មម) */
-        .upload-row-flex {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
+        /* Square Upload Box (ការ៉េបួនជ្រុងស្អាត) */
         .upload-dropzone {
             position: relative;
-            width: 96px;
-            height: 96px;
+            width: 112px;
+            height: 112px;
+            aspect-ratio: 1 / 1;
             flex-shrink: 0;
             background: #090d16;
-            border: 2px dashed #334155;
-            border-radius: 14px;
+            border: 2px dashed #38bdf8;
+            border-radius: 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 6px;
-            transition: border-color 0.2s, background 0.2s;
+            padding: 8px;
+            transition: border-color 0.2s, background 0.2s, transform 0.15s;
             cursor: pointer;
         }
+        .upload-dropzone:active { transform: scale(0.97); }
         .upload-dropzone:hover {
             border-color: #38bdf8;
             background: rgba(56, 189, 248, 0.08);
@@ -1494,43 +1490,83 @@
         }, extra);
     }
 
+    function getLocalAllowedResellers() {
+        try {
+            return JSON.parse(localStorage.getItem("kty_local_resellers") || "[]");
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function setLocalAllowedResellers(arr) {
+        try {
+            localStorage.setItem("kty_local_resellers", JSON.stringify(arr || []));
+        } catch (e) {}
+    }
+
+    function renderResellerRowsHtml(items) {
+        if (!items || !items.length) {
+            return `<div style="font-size:12px; color:#94a3b8; padding:8px 0;">មិនទាន់មាន Reseller នៅឡើយទេ។ វាយ Username នៅខាងលើដើម្បីបន្ថែម។</div>`;
+        }
+        return items.map(r => {
+            const uname = typeof r === "string" ? r : r.username;
+            const name = typeof r === "object" && r.name ? ` (${escapeHtml(r.name)})` : "";
+            const bal = typeof r === "object" && r.balance !== undefined ? ` • បាលែន: $${Number(r.balance || 0).toFixed(2)}` : "";
+            return `
+                <div class="list-row">
+                    <div>
+                        <b style="color:#34d399;">@${escapeHtml(uname)}</b>${name}
+                        <span style="color:#94a3b8; font-size:11px;">${bal}</span>
+                    </div>
+                    <div class="row-actions">
+                        <button class="btn-danger" data-user="${escapeHtml(uname)}" onclick="removeApprovedReseller(this.getAttribute('data-user'))">ដកសិទ្ធិ</button>
+                    </div>
+                </div>`;
+        }).join("");
+    }
+
     async function loadAdminResellers() {
         const listEl = document.getElementById("adminResellerList");
         if (!listEl) return;
-        listEl.innerHTML = `<div style="font-size:12px; color:#94a3b8;">កំពុងទាញយកបញ្ជី Reseller...</div>`;
+        const cached = getLocalAllowedResellers();
+        listEl.innerHTML = renderResellerRowsHtml(cached);
+
         try {
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), 8000);
             const res = await fetch(`${API_URL}/api/admin/resellers/list`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(adminAuthFields())
+                body: JSON.stringify(adminAuthFields()),
+                signal: controller.signal
             });
+            clearTimeout(tid);
             const data = await res.json();
             if (data.success) {
                 const items = data.resellers || [];
-                if (!items.length) {
-                    listEl.innerHTML = `<div style="font-size:12px; color:#94a3b8; padding:8px 0;">មិនទាន់មាន Reseller នៅឡើយទេ។ វាយ Username នៅខាងលើដើម្បីបន្ថែម។</div>`;
-                    return;
-                }
-                listEl.innerHTML = items.map(r => `
-                    <div class="list-row">
-                        <div>
-                            <b style="color:#34d399;">@${escapeHtml(r.username)}</b>
-                            ${r.name ? `<span style="color:#cbd5e1;"> (${escapeHtml(r.name)})</span>` : ''}
-                            <span style="color:#94a3b8; font-size:11px;"> • បាលែន: $${Number(r.balance || 0).toFixed(2)}</span>
-                        </div>
-                        <div class="row-actions">
-                            <button class="btn-danger" data-user="${escapeHtml(r.username)}" onclick="removeApprovedReseller(this.getAttribute('data-user'))">ដកសិទ្ធិ</button>
-                        </div>
-                    </div>
-                `).join("");
+                const cleanUsers = (data.usernames || items.map(x => x.username)).filter(Boolean);
+                setLocalAllowedResellers(cleanUsers);
+                listEl.innerHTML = renderResellerRowsHtml(items.length ? items : cleanUsers);
+            } else if (data.error) {
+                listEl.innerHTML = `<div style="font-size:12px; color:#f43f5e; padding:6px 0;">⚠️ ${escapeHtml(data.error)}</div>` + renderResellerRowsHtml(cached);
             }
-        } catch (e) {}
+        } catch (e) {
+            listEl.innerHTML = `<div style="font-size:11px; color:#fbbf24; padding:4px 0;">⏳ Server កំពុងភ្ញាក់ ឬកំពុង Sync ទិន្នន័យ...</div>` + renderResellerRowsHtml(cached);
+        }
     }
 
     async function addApprovedReseller() {
         const inp = document.getElementById("newResellerUsernameInput");
-        const uname = (inp.value || "").replace(/^@/, "").trim();
+        const uname = (inp.value || "").replace(/^@/, "").trim().toLowerCase();
         if (!uname) return alert("សូមបញ្ចូល Telegram Username!");
+
+        const listEl = document.getElementById("adminResellerList");
+        const currentList = getLocalAllowedResellers();
+        if (!currentList.includes(uname)) currentList.push(uname);
+        setLocalAllowedResellers(currentList);
+        inp.value = "";
+        if (listEl) listEl.innerHTML = renderResellerRowsHtml(currentList);
+
         try {
             const res = await fetch(`${API_URL}/api/admin/reseller/add`, {
                 method: "POST",
@@ -1538,24 +1574,33 @@
                 body: JSON.stringify(adminAuthFields({ username: uname }))
             });
             const data = await res.json();
-            if (data.success) {
-                inp.value = "";
+            if (data.success && Array.isArray(data.usernames)) {
+                setLocalAllowedResellers(data.usernames);
                 await loadAdminResellers();
-            } else {
-                alert(data.error || "បរាជ័យ");
+            } else if (data.error) {
+                alert("⚠️ " + data.error);
             }
-        } catch (e) {}
+        } catch (e) {
+            alert("✅ បានរក្សាទុក @" + uname + " រួចរាល់ (កំពុង Sync ជាមួយ Server)។");
+        }
     }
 
     async function removeApprovedReseller(uname) {
+        const target = String(uname || "").replace(/^@/, "").trim().toLowerCase();
+        const filtered = getLocalAllowedResellers().filter(x => String(x).toLowerCase() !== target);
+        setLocalAllowedResellers(filtered);
+        const listEl = document.getElementById("adminResellerList");
+        if (listEl) listEl.innerHTML = renderResellerRowsHtml(filtered);
+
         try {
             const res = await fetch(`${API_URL}/api/admin/reseller/remove`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(adminAuthFields({ username: uname }))
+                body: JSON.stringify(adminAuthFields({ username: target }))
             });
             const data = await res.json();
-            if (data.success) {
+            if (data.success && Array.isArray(data.usernames)) {
+                setLocalAllowedResellers(data.usernames);
                 await loadAdminResellers();
             }
         } catch (e) {}
