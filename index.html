@@ -452,6 +452,47 @@
         .stat-label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
         .stat-val { font-size: 18px; font-weight: 800; color: #34d399; }
 
+        /* Compact Small Square Upload Box (ការ៉េបួនជ្រុងតូចល្មម) */
+        .upload-row-flex {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .upload-dropzone {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            flex-shrink: 0;
+            background: #090d16;
+            border: 2px dashed #334155;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6px;
+            transition: border-color 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+        .upload-dropzone:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.08);
+        }
+        .upload-dropzone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .upload-dz-icon { font-size: 22px; line-height: 1; margin-bottom: 4px; }
+        .upload-dz-title { font-size: 11px; font-weight: bold; color: #e2e8f0; line-height: 1.2; }
+        .upload-dz-sub { display: none; }
+        .upload-dz-status { font-size: 11px; color: #38bdf8; font-weight: bold; margin-top: 6px; }
+
         .preview-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
         .preview-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid #38bdf8; }
         .preview-item img { width: 100%; height: 100%; object-fit: cover; }
@@ -612,6 +653,7 @@
                 <button class="tab-btn" onclick="switchAdminTab('tabAcc', this); loadAdminAccounts();">🔐 លក់គណនី</button>
                 <button class="tab-btn" onclick="switchAdminTab('tabMarketItem', this); renderAdminMarketItems();">🛍️ លក់អាយធីម</button>
                 <button class="tab-btn" onclick="switchAdminTab('tabOrders', this); loadAdminOrders();">📜 ប្រវត្តិ & ទទួល</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabResellers', this); loadAdminResellers();">🤝 Reseller</button>
             </div>
 
             <div id="tabBanner" class="admin-sec active">
@@ -738,9 +780,14 @@
                 </div>
 
                 <div class="input-group">
-                    <label>Upload រូបភាពគណនី (អតិបរមា ១០ រូប)</label>
-                    <input type="file" id="accPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this, 'acc')" style="background:#090d16; padding:8px; border-radius:8px; width:100%; color:#cbd5e1;">
-                    <div id="uploadProgressText" style="font-size:12px; color:#38bdf8; margin-top:4px;"></div>
+                    <label>រូបភាពគណនី (អតិបរមា ១០ រូប)</label>
+                    <div class="upload-dropzone">
+                        <input type="file" id="accPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this, 'acc')">
+                        <div class="upload-dz-icon">🖼️</div>
+                        <div class="upload-dz-title">ចុចដើម្បីជ្រើសរើសរូបភាពគណនី</div>
+                        <div class="upload-dz-sub">គាំទ្រ JPG, PNG, WEBP • ផ្ទុករូបភាពស្អាត និងលឿន</div>
+                    </div>
+                    <div id="uploadProgressText" class="upload-dz-status"></div>
                     <div class="preview-grid" id="accPhotoPreview"></div>
                 </div>
 
@@ -770,9 +817,14 @@
                     </div>
                 </div>
                 <div class="input-group">
-                    <label>Upload រូបភាព Item</label>
-                    <input type="file" id="adminMarketPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this, 'admin_market')" style="background:#090d16; padding:8px; border-radius:8px; width:100%; color:#cbd5e1;">
-                    <div id="adminMarketUploadText" style="font-size:12px; color:#38bdf8; margin-top:4px;"></div>
+                    <label>រូបភាព Item</label>
+                    <div class="upload-dropzone">
+                        <input type="file" id="adminMarketPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this, 'admin_market')">
+                        <div class="upload-dz-icon">💎</div>
+                        <div class="upload-dz-title">ចុចដើម្បីជ្រើសរើសរូបភាព Item</div>
+                        <div class="upload-dz-sub">អតិបរមា ១០ រូប • JPG, PNG, WEBP</div>
+                    </div>
+                    <div id="adminMarketUploadText" class="upload-dz-status"></div>
                     <div class="preview-grid" id="adminMarketPhotoPreview"></div>
                 </div>
                 <div style="display:flex; gap:8px;">
@@ -788,6 +840,18 @@
                     <button class="btn-admin" onclick="loadAdminOrders()">🔄 ផ្ទុកឡើងវិញ</button>
                 </div>
                 <div id="adminAllOrdersList" style="max-height:380px; overflow-y:auto;"></div>
+            </div>
+
+            <div id="tabResellers" class="admin-sec">
+                <div class="input-group">
+                    <label>បញ្ចូល Telegram Username របស់អ្នក Reseller</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="newResellerUsernameInput" placeholder="ឧទាហរណ៍៖ @username ឬ username">
+                        <button class="btn-success" style="padding:0 14px; border-radius:10px; flex-shrink:0;" onclick="addApprovedReseller()">+ ផ្តល់សិទ្ធិ</button>
+                    </div>
+                    <div class="note-text">អ្នកដែលមាន Username ក្នុងបញ្ជីនេះ នឹងបើកមុខងារ 🤝 Reseller លក់គណនី/Item និងទទួល 90% ដោយស្វ័យប្រវត្តិ។</div>
+                </div>
+                <div id="adminResellerList" style="margin-top:10px;"></div>
             </div>
         </div>
 
@@ -874,9 +938,14 @@
                 </div>
 
                 <div class="input-group">
-                    <label>Upload រូបភាព (អតិបរមា ១០ រូប)</label>
-                    <input type="file" id="resPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this, 'reseller')" style="background:#090d16; padding:8px; border-radius:8px; width:100%; color:#cbd5e1;">
-                    <div id="resUploadText" style="font-size:12px; color:#38bdf8; margin-top:4px;"></div>
+                    <label>រូបភាពទំនិញ (អតិបរមា ១០ រូប)</label>
+                    <div class="upload-dropzone">
+                        <input type="file" id="resPhotoInput" accept="image/*" multiple onchange="handleAccPhotoUpload(this, 'reseller')">
+                        <div class="upload-dz-icon">📸</div>
+                        <div class="upload-dz-title">ចុចដើម្បីជ្រើសរើសរូបភាពទំនិញ</div>
+                        <div class="upload-dz-sub">គាំទ្រ JPG, PNG, WEBP • អតិបរមា ១០ រូប</div>
+                    </div>
+                    <div id="resUploadText" class="upload-dz-status"></div>
                     <div class="preview-grid" id="resPhotoPreview"></div>
                 </div>
 
@@ -911,9 +980,14 @@
                     <input type="number" step="0.01" id="wdAmount" placeholder="បញ្ចូលទឹកប្រាក់ដែលចង់ដក...">
                 </div>
                 <div class="input-group">
-                    <label>Upload រូបភាព KHQR សម្រាប់ម្ចាស់ហាងផ្ញើប្រាក់ឱ្យ</label>
-                    <input type="file" id="wdQrInput" accept="image/*" onchange="handleWithdrawQrUpload(this)" style="background:#090d16; padding:8px; border-radius:8px; width:100%; color:#cbd5e1;">
-                    <div id="wdQrStatus" style="font-size:12px; color:#34d399; margin-top:4px;"></div>
+                    <label>រូបភាព KHQR សម្រាប់ម្ចាស់ហាងផ្ញើប្រាក់ឱ្យ</label>
+                    <div class="upload-dropzone">
+                        <input type="file" id="wdQrInput" accept="image/*" onchange="handleWithdrawQrUpload(this)">
+                        <div class="upload-dz-icon">🏦</div>
+                        <div class="upload-dz-title">ចុចដើម្បីជ្រើសរើសរូបភាព KHQR</div>
+                        <div class="upload-dz-sub">រូបភាព QR ធនាគាររបស់អ្នកសម្រាប់ទទួលប្រាក់ 90%</div>
+                    </div>
+                    <div id="wdQrStatus" class="upload-dz-status" style="color:#34d399;"></div>
                 </div>
                 <button class="btn-success" style="width:100%; padding:12px; font-size:14px;" onclick="submitResellerWithdraw()">📤 ផ្ញើសំណើដកប្រាក់</button>
 
@@ -932,25 +1006,25 @@
             <div class="games-grid" id="gamesGrid"></div>
         </div>
 
-        <!-- ប៊ូតុងពីរទន្ទឹមគ្នា៖ គណនី និង អាយធីម -->
+        <!-- ប៊ូតុងពីរទន្ទឹមគ្នា៖ គណនី និង Item -->
         <div class="dual-switch-row">
             <button id="btnShowAccounts" class="dual-switch-btn active-acc" onclick="switchStorefrontTab('accounts')">
-                🔐 គណនី (ទិញភ្លាមបានលេង)
+                🔐 គណនី
             </button>
             <button id="btnShowMarketItems" class="dual-switch-btn" onclick="switchStorefrontTab('items')">
-                💎 អាយធីម (Roblox Username)
+                💎 Item
             </button>
         </div>
 
         <!-- បញ្ជីគណនីដាក់លក់ -->
         <div id="accountsHomeSection">
-            <div class="sec-title">🔐 គណនីហ្គេមដាក់លក់ (ទិញភ្លាមបានលេងភ្លាម)</div>
+            <div class="sec-title">🔐 គណនី</div>
             <div class="accounts-grid" id="accountsGrid"></div>
         </div>
 
-        <!-- បញ្ជីអាយធីមដាក់លក់ (តម្រូវឱ្យបញ្ចូល Username Roblox) -->
+        <!-- បញ្ជី Item Game -->
         <div id="marketItemsHomeSection" style="display:none;">
-            <div class="sec-title">💎 អាយធីមដាក់លក់ (បញ្ចូល Username Roblox ដើម្បីទទួល)</div>
+            <div class="sec-title">💎 Item Game</div>
             <div class="accounts-grid" id="marketItemsGrid"></div>
         </div>
     </div>
@@ -1412,6 +1486,107 @@
     }
 
     // ==================== Reseller Portal Functions ====================
+
+    function adminAuthFields(extra = {}) {
+        return Object.assign({
+            tg_id: currentUser ? String(currentUser.id) : "",
+            username: currentUser ? (currentUser.username || "") : ""
+        }, extra);
+    }
+
+    async function loadAdminResellers() {
+        const listEl = document.getElementById("adminResellerList");
+        if (!listEl) return;
+        listEl.innerHTML = `<div style="font-size:12px; color:#94a3b8;">កំពុងទាញយកបញ្ជី Reseller...</div>`;
+        try {
+            const res = await fetch(`${API_URL}/api/admin/resellers/list`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(adminAuthFields())
+            });
+            const data = await res.json();
+            if (data.success) {
+                const items = data.resellers || [];
+                if (!items.length) {
+                    listEl.innerHTML = `<div style="font-size:12px; color:#94a3b8; padding:8px 0;">មិនទាន់មាន Reseller នៅឡើយទេ។ វាយ Username នៅខាងលើដើម្បីបន្ថែម។</div>`;
+                    return;
+                }
+                listEl.innerHTML = items.map(r => `
+                    <div class="list-row">
+                        <div>
+                            <b style="color:#34d399;">@${escapeHtml(r.username)}</b>
+                            ${r.name ? `<span style="color:#cbd5e1;"> (${escapeHtml(r.name)})</span>` : ''}
+                            <span style="color:#94a3b8; font-size:11px;"> • បាលែន: $${Number(r.balance || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="row-actions">
+                            <button class="btn-danger" data-user="${escapeHtml(r.username)}" onclick="removeApprovedReseller(this.getAttribute('data-user'))">ដកសិទ្ធិ</button>
+                        </div>
+                    </div>
+                `).join("");
+            }
+        } catch (e) {}
+    }
+
+    async function addApprovedReseller() {
+        const inp = document.getElementById("newResellerUsernameInput");
+        const uname = (inp.value || "").replace(/^@/, "").trim();
+        if (!uname) return alert("សូមបញ្ចូល Telegram Username!");
+        try {
+            const res = await fetch(`${API_URL}/api/admin/reseller/add`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(adminAuthFields({ username: uname }))
+            });
+            const data = await res.json();
+            if (data.success) {
+                inp.value = "";
+                await loadAdminResellers();
+            } else {
+                alert(data.error || "បរាជ័យ");
+            }
+        } catch (e) {}
+    }
+
+    async function removeApprovedReseller(uname) {
+        try {
+            const res = await fetch(`${API_URL}/api/admin/reseller/remove`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(adminAuthFields({ username: uname }))
+            });
+            const data = await res.json();
+            if (data.success) {
+                await loadAdminResellers();
+            }
+        } catch (e) {}
+    }
+
+    async function refreshResellerNavVisibility() {
+        const resellerBtn = document.getElementById("resellerPortalBtn");
+        if (!currentUser || !currentUser.id || isAdminUser()) {
+            resellerBtn.style.display = "none";
+            return;
+        }
+        try {
+            const res = await fetch(`${API_URL}/api/reseller/dashboard`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tg_id: String(currentUser.id),
+                    tg_name: currentUser.first_name || "Reseller",
+                    tg_username: currentUser.username || ""
+                })
+            });
+            const data = await res.json();
+            resellerBtn.style.display = data.success ? "inline-block" : "none";
+            if (!data.success) {
+                document.getElementById("resellerPanel").style.display = "none";
+            }
+        } catch (e) {
+            resellerBtn.style.display = "none";
+        }
+    }
+
     function toggleResellerPortal(forceState) {
         const panel = document.getElementById("resellerPanel");
         const nextShow = typeof forceState === "boolean" ? forceState : (panel.style.display !== "block");
@@ -2434,7 +2609,7 @@
                 loadAdminOrders();
             } else {
                 adminPanel.style.display = "none";
-                resellerBtn.style.display = "inline-block";
+                refreshResellerNavVisibility();
             }
         } else {
             authArea.innerHTML = `<button class="tg-btn" onclick="openLoginModal()">ចុះឈ្មោះ</button>`;
@@ -2510,7 +2685,7 @@
             const res = await fetch(`${API_URL}/api/orders/history`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tg_id: String(currentUser.id) })
+                body: JSON.stringify(adminAuthFields())
             });
             const data = await res.json();
             if (data.orders && data.orders.length > 0) {
@@ -2589,7 +2764,7 @@
             const res = await fetch(`${API_URL}/api/admin/orders`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tg_id: String(currentUser.id) })
+                body: JSON.stringify(adminAuthFields())
             });
             const data = await res.json();
             if (data.success && data.orders.length > 0) {
@@ -3016,7 +3191,7 @@
             const res = await fetch(`${API_URL}/api/admin/accounts`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tg_id: String(currentUser.id) })
+                body: JSON.stringify(adminAuthFields())
             });
             const data = await res.json();
             if (data.success) {
@@ -3133,7 +3308,7 @@
             await fetch(`${API_URL}/api/admin/account/delete`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tg_id: String(currentUser.id), acc_id: accId })
+                body: JSON.stringify(adminAuthFields({ acc_id: accId }))
             });
             await fetchStoreData();
             await loadAdminAccounts();
