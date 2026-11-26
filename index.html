@@ -3182,33 +3182,48 @@
     }
 
     async function saveAdminMarketItem() {
-        if (!currentUser) return;
+        if (!currentUser) return alert("សូម Login គណនី Admin ជាមុនសិន!");
         const name = document.getElementById("adminMarketItemName").value.trim();
         const price = parseFloat(document.getElementById("adminMarketItemPrice").value);
         const stock = parseInt(document.getElementById("adminMarketItemStock").value || "1");
         if (!name || isNaN(price) || price <= 0) return alert("សូមបំពេញឈ្មោះ និងតម្លៃ Item!");
 
-        const res = await fetch(`${API_URL}/api/reseller/product/save`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                tg_id: String(currentUser.id),
-                seller_name: "",
-                kind: "ITEM",
-                product: {
-                    id: editingAdminMarketId,
-                    name: name,
-                    game_name: "Roblox",
-                    price: price,
-                    stock: stock,
-                    images: uploadedAdminMarketImages
-                }
-            })
-        });
-        const data = await res.json();
-        if (data.success) {
-            cancelAdminMarketItem();
-            await fetchStoreData();
+        const btn = document.getElementById("adminMarketSaveBtn");
+        const prevText = btn ? btn.innerText : "+ បង្ហោះលក់ Item";
+        if (btn) { btn.disabled = true; btn.innerText = "⏳ កំពុងបង្ហោះ..."; }
+
+        try {
+            const res = await fetch(`${API_URL}/api/reseller/product/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tg_id: String(currentUser.id),
+                    tg_username: currentUser.username || "",
+                    username: currentUser.username || "",
+                    seller_name: "",
+                    kind: "ITEM",
+                    product: {
+                        id: editingAdminMarketId,
+                        name: name,
+                        game_name: "Roblox",
+                        price: price,
+                        stock: stock,
+                        images: uploadedAdminMarketImages
+                    }
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert("✅ បានបង្ហោះលក់ Item រួចរាល់!");
+                cancelAdminMarketItem();
+                await fetchStoreData();
+            } else {
+                alert("⚠️ " + (data.error || "មិនអាចបង្ហោះ Item បានទេ!"));
+            }
+        } catch (e) {
+            alert("⚠️ មិនអាចភ្ជាប់ទៅ Server ដើម្បីបង្ហោះ Item បានទេ!");
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerText = prevText; }
         }
     }
 
