@@ -20,7 +20,6 @@
             display: flex;
             flex-direction: column;
         }
-        /* Navbar */
         .navbar {
             background: rgba(17, 24, 39, 0.95);
             backdrop-filter: blur(10px);
@@ -85,7 +84,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Banner 16:9 */
         .banner-wrapper {
             position: relative;
             width: 100%;
@@ -133,7 +131,6 @@
             font-weight: bold;
         }
 
-        /* Games Grid */
         .games-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -163,7 +160,6 @@
         }
         .game-name { font-size: 13px; font-weight: bold; color: #f1f5f9; }
 
-        /* Accounts Grid */
         .accounts-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -220,7 +216,6 @@
         .stock-in { background: rgba(16, 185, 129, 0.15); color: #10b981; }
         .stock-out { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 
-        /* Detail Layout */
         .detail-layout {
             display: grid;
             grid-template-columns: 1fr;
@@ -361,7 +356,6 @@
         .btn-danger { background: #ef4444; color: #fff; padding: 5px 8px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
         .btn-cancel { background: #475569; color: #fff; padding: 10px; font-size: 13px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
 
-        /* Admin Panel */
         #adminPanel {
             display: none;
             background: #172033;
@@ -387,7 +381,6 @@
         .preview-item img { width: 100%; height: 100%; object-fit: cover; }
         .preview-del { position: absolute; top: 2px; right: 2px; background: #ef4444; color: #fff; border: none; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; cursor: pointer; }
 
-        /* Footer */
         .site-footer {
             background: #0d1322;
             border-top: 1px solid #1e293b;
@@ -417,7 +410,6 @@
         .khqr-tag { background: #e11d48; color: #fff; padding: 2px 7px; border-radius: 5px; font-size: 11px; font-weight: 800; }
         .footer-bottom { padding-top: 18px; text-align: center; font-size: 12px; color: #64748b; }
 
-        /* Floating Chat Button */
         .floating-chat-btn {
             position: fixed;
             bottom: 18px;
@@ -440,7 +432,6 @@
         .floating-chat-btn:active { transform: scale(0.95); }
         .chat-badge { background: #ef4444; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 12px; display: none; }
 
-        /* Chat Modal */
         .chat-modal {
             display: none;
             position: fixed;
@@ -1003,6 +994,14 @@
     let adminChatTab = "recent";
     let adminChatOverviewData = { recent_rooms: [], all_users: [] };
 
+    function escapeHtml(str) {
+        return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function attrJson(obj) {
+        return escapeHtml(JSON.stringify(obj || {}));
+    }
+
     async function resolveBotUsername() {
         try {
             const res = await fetch(`https://api.telegram.org/bot${NEW_BOT_TOKEN}/getMe`);
@@ -1014,10 +1013,9 @@
     }
 
     window.onload = async () => {
-        await resolveBotUsername();
         checkAuth();
-        renderGames();
         await fetchStoreData();
+        resolveBotUsername();
         setInterval(nextBanner, 4000);
         setInterval(checkChatUnreadBackground, 8000);
         checkChatUnreadBackground();
@@ -1175,6 +1173,11 @@
         } catch (e) {}
     }
 
+    function handleRoomClick(el) {
+        const meta = JSON.parse(el.getAttribute("data-meta") || "{}");
+        openAdminRoom(meta.id, meta.name, meta.photo, meta.username);
+    }
+
     function renderAdminChatDirectory() {
         const listEl = document.getElementById("adminChatRoomsList");
         if (adminChatTab === "recent") {
@@ -1183,8 +1186,10 @@
                 listEl.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:30px 10px; font-size:13px;">មិនទាន់មានអតិថិជនឆាតមកថ្មីៗនៅឡើយទេ។<br><span style="font-size:11px; color:#38bdf8;">ចុចលើក្រឡោន "👥 អតិថិជនទាំងអស់" ដើម្បីចាប់ផ្តើមឆាតទៅពួកគេ!</span></div>`;
                 return;
             }
-            listEl.innerHTML = rooms.map(r => `
-                <div class="chat-room-item" onclick="openAdminRoom('${r.room_id}', '${escapeJs(r.user_name)}', '${r.user_photo || ''}', '${r.user_username || ''}')">
+            listEl.innerHTML = rooms.map(r => {
+                const meta = { id: r.room_id, name: r.user_name, photo: r.user_photo || "", username: r.user_username || "" };
+                return `
+                <div class="chat-room-item" data-meta="${attrJson(meta)}" onclick="handleRoomClick(this)">
                     <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
                         <img src="${r.user_photo || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">
                         <div style="overflow:hidden;">
@@ -1193,11 +1198,11 @@
                         </div>
                     </div>
                     <div style="text-align:right; flex-shrink:0;">
-                        <div style="font-size:10px; color:#64748b;">${r.last_time}</div>
+                        <div style="font-size:10px; color:#64748b;">${escapeHtml(r.last_time)}</div>
                         ${r.unread_admin > 0 ? `<span style="background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold;">${r.unread_admin}</span>` : ''}
                     </div>
-                </div>
-            `).join("");
+                </div>`;
+            }).join("");
         } else {
             const keyword = (document.getElementById("adminUserSearchInput").value || "").toLowerCase().trim();
             const users = (adminChatOverviewData.all_users || []).filter(u =>
@@ -1209,18 +1214,20 @@
                 listEl.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:30px 10px; font-size:13px;">មិនមានអតិថិជនដែលបានចុះឈ្មោះនៅឡើយទេ។</div>`;
                 return;
             }
-            listEl.innerHTML = users.map(u => `
-                <div class="chat-room-item" onclick="openAdminRoom('${u.user_id}', '${escapeJs(u.user_name)}', '${u.user_photo || ''}', '${u.user_username || ''}')">
+            listEl.innerHTML = users.map(u => {
+                const meta = { id: u.user_id, name: u.user_name, photo: u.user_photo || "", username: u.user_username || "" };
+                return `
+                <div class="chat-room-item" data-meta="${attrJson(meta)}" onclick="handleRoomClick(this)">
                     <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
                         <img src="${u.user_photo || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">
                         <div style="overflow:hidden;">
                             <div style="font-weight:bold; font-size:13px; color:#fff;">${escapeHtml(u.user_name)}</div>
-                            <div style="font-size:11px; color:#38bdf8;">${u.user_username ? '@' + escapeHtml(u.user_username) : 'ID: ' + u.user_id}</div>
+                            <div style="font-size:11px; color:#38bdf8;">${u.user_username ? '@' + escapeHtml(u.user_username) : 'ID: ' + escapeHtml(u.user_id)}</div>
                         </div>
                     </div>
                     <span style="background:#0284c7; color:#fff; font-size:11px; padding:5px 10px; border-radius:14px; font-weight:bold; flex-shrink:0;">💬 ឆាត</span>
-                </div>
-            `).join("");
+                </div>`;
+            }).join("");
         }
     }
 
@@ -1262,7 +1269,7 @@
                             <div class="msg-bubble">
                                 <div class="msg-sender">${m.is_admin ? '👑 KTY STORE' : escapeHtml(m.sender_name)}</div>
                                 <div>${escapeHtml(m.text)}</div>
-                                <div class="msg-time">${m.time}</div>
+                                <div class="msg-time">${escapeHtml(m.time)}</div>
                             </div>
                         </div>`;
                 }).join("");
@@ -1272,14 +1279,6 @@
                 }
             }
         } catch (e) {}
-    }
-
-    function escapeHtml(str) {
-        return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    function escapeJs(str) {
-        return String(str || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
     }
 
     async function sendChatText() {
@@ -1356,7 +1355,7 @@
                         <div style="text-align:left; overflow:hidden;">
                             <div style="font-size:11px; color:#10b981; font-weight:bold;">✅ រកឃើញគណនី Roblox ត្រឹមត្រូវ</div>
                             <div style="font-size:14px; font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(data.user.display_name)}</div>
-                            <div style="font-size:12px; color:#cbd5e1;">@${escapeHtml(data.user.username)} <span style="color:#64748b;">(ID: ${data.user.id})</span></div>
+                            <div style="font-size:12px; color:#cbd5e1;">@${escapeHtml(data.user.username)} <span style="color:#64748b;">(ID: ${escapeHtml(data.user.id)})</span></div>
                         </div>
                     </div>`;
             } else {
@@ -1691,6 +1690,11 @@
         }
     }
 
+    function handleCopyClick(el) {
+        const val = el.getAttribute("data-copy") || "";
+        copyRawText(val);
+    }
+
     async function openProfileModal() {
         if (!currentUser) return;
         document.getElementById("profileTitle").innerText = currentUser.first_name;
@@ -1722,18 +1726,16 @@
             listEl.innerHTML = combinedOrders.map(o => {
                 let credHtml = "";
                 if (o.status === "PAID" && o.order_type === "ACCOUNT" && (o.delivered_login || o.delivered_password)) {
-                    const safeLogin = escapeJs(o.delivered_login || "");
-                    const safePass = escapeJs(o.delivered_password || "");
                     credHtml = `
                         <div style="background:#131b2e; padding:8px 10px; border-radius:8px; margin-top:8px; border:1px solid #10b981;">
                             <div style="font-size:11px; color:#10b981; font-weight:bold; margin-bottom:4px;">🔐 ព័ត៌មានចូលគណនីហ្គេម៖</div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <span>📧 User: <b style="color:#fff;">${escapeHtml(o.delivered_login)}</b></span>
-                                <button class="copy-btn" onclick="copyRawText('${safeLogin}')">ចម្លង</button>
+                                <button class="copy-btn" data-copy="${escapeHtml(o.delivered_login || '')}" onclick="handleCopyClick(this)">ចម្លង</button>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span>🔑 Pass: <b style="color:#fbbf24;">${escapeHtml(o.delivered_password)}</b></span>
-                                <button class="copy-btn" onclick="copyRawText('${safePass}')">ចម្លង</button>
+                                <button class="copy-btn" data-copy="${escapeHtml(o.delivered_password || '')}" onclick="handleCopyClick(this)">ចម្លង</button>
                             </div>
                         </div>`;
                 }
@@ -1741,11 +1743,11 @@
                     <div class="history-item" style="border-left-color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">
                         <div style="display:flex; justify-content:space-between; font-weight:bold;">
                             <span>[${escapeHtml(o.game_name)}] ${escapeHtml(o.item_name)}</span>
-                            <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${o.status}</span>
+                            <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${escapeHtml(o.status)}</span>
                         </div>
                         <div style="color:#94a3b8; margin-top:4px;">តម្លៃ: $${parseFloat(o.amount).toFixed(2)} • ${escapeHtml(o.player_info)}</div>
                         ${credHtml}
-                        <div style="color:#64748b; font-size:11px; margin-top:4px;">${o.bill_number} • ${o.created_at}</div>
+                        <div style="color:#64748b; font-size:11px; margin-top:4px;">${escapeHtml(o.bill_number)} • ${escapeHtml(o.created_at)}</div>
                     </div>`;
             }).join("");
         } else {
@@ -1768,12 +1770,12 @@
                 container.innerHTML = data.orders.map(o => `
                     <div class="history-item" style="border-left-color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">
                         <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                            <span>${escapeHtml(o.game_name)} - ${escapeHtml(o.item_name)} ($${o.amount.toFixed(2)})</span>
-                            <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${o.status}</span>
+                            <span>${escapeHtml(o.game_name)} - ${escapeHtml(o.item_name)} ($${parseFloat(o.amount).toFixed(2)})</span>
+                            <span style="color:${o.status === 'PAID' ? '#10b981' : '#fbbf24'};">${escapeHtml(o.status)}</span>
                         </div>
                         <div style="color:#cbd5e1; margin-top:3px;">ព័ត៌មាន៖ <b>${escapeHtml(o.player_info)}</b></div>
                         <div style="color:#94a3b8; margin-top:2px;">អ្នកទិញ៖ ${o.tg_username ? '@' + escapeHtml(o.tg_username) : escapeHtml(o.tg_name)}</div>
-                        <div style="color:#64748b; font-size:11px; margin-top:2px;">${o.bill_number} • ${o.created_at}</div>
+                        <div style="color:#64748b; font-size:11px; margin-top:2px;">${escapeHtml(o.bill_number)} • ${escapeHtml(o.created_at)}</div>
                     </div>
                 `).join("");
             } else {
@@ -1950,11 +1952,11 @@
                 <div class="list-row">
                     <span>🎮 ${escapeHtml(g.name)}</span>
                     <div class="row-actions">
-                        <button class="btn-edit" onclick="editGame('${g.id}')">✏️ កែ</button>
-                        <button class="btn-danger" onclick="deleteGame('${g.id}')">លុប</button>
+                        <button class="btn-edit" data-id="${escapeHtml(g.id)}" onclick="editGame(this.getAttribute('data-id'))">✏️ កែ</button>
+                        <button class="btn-danger" data-id="${escapeHtml(g.id)}" onclick="deleteGame(this.getAttribute('data-id'))">លុប</button>
                     </div>
                 </div>`;
-            gSelect.innerHTML += `<option value="${g.id}">${escapeHtml(g.name)}</option>`;
+            gSelect.innerHTML += `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}</option>`;
         });
         if (prevSelectedGame) gSelect.value = prevSelectedGame;
 
@@ -1962,10 +1964,10 @@
             const g = storeData.games.find(x => x.id === item.game_id);
             return `
                 <div class="list-row">
-                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">[${g ? escapeHtml(g.name) : "Game"}] ${escapeHtml(item.name)} - $${item.price}</span>
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">[${g ? escapeHtml(g.name) : "Game"}] ${escapeHtml(item.name)} - $${escapeHtml(item.price)}</span>
                     <div class="row-actions">
-                        <button class="btn-edit" onclick="editItem('${item.id}')">✏️ កែ</button>
-                        <button class="btn-danger" onclick="deleteItem('${item.id}')">លុប</button>
+                        <button class="btn-edit" data-id="${escapeHtml(item.id)}" onclick="editItem(this.getAttribute('data-id'))">✏️ កែ</button>
+                        <button class="btn-danger" data-id="${escapeHtml(item.id)}" onclick="deleteItem(this.getAttribute('data-id'))">លុប</button>
                     </div>
                 </div>`;
         }).join("");
@@ -2013,7 +2015,7 @@
         const container = document.getElementById("accPhotoPreview");
         container.innerHTML = uploadedAccImages.map((fid, idx) => `
             <div class="preview-item">
-                <img src="${API_URL}/api/tg-image/${fid}">
+                <img src="${API_URL}/api/tg-image/${escapeHtml(fid)}">
                 <button class="preview-del" onclick="removeUploadedAccPhoto(${idx})">×</button>
             </div>
         `).join("");
@@ -2039,11 +2041,11 @@
                 document.getElementById("adminAccList").innerHTML = adminAccountsCache.map(a => `
                     <div class="list-row">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">
-                            [${escapeHtml(a.game_name)}] ${escapeHtml(a.title)} ($${a.price} | ស្តុក:${a.stock})
+                            [${escapeHtml(a.game_name)}] ${escapeHtml(a.title)} ($${escapeHtml(a.price)} | ស្តុក:${escapeHtml(a.stock)})
                         </span>
                         <div class="row-actions">
-                            <button class="btn-edit" onclick="editAccountPost('${a.id}')">✏️ កែ</button>
-                            <button class="btn-danger" onclick="deleteAccountPost('${a.id}')">លុប</button>
+                            <button class="btn-edit" data-id="${escapeHtml(a.id)}" onclick="editAccountPost(this.getAttribute('data-id'))">✏️ កែ</button>
+                            <button class="btn-danger" data-id="${escapeHtml(a.id)}" onclick="deleteAccountPost(this.getAttribute('data-id'))">លុប</button>
                         </div>
                     </div>
                 `).join("");
