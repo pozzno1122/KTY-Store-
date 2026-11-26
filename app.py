@@ -685,8 +685,13 @@ def reseller_dashboard():
         return jsonify({"success": False, "error": "Missing user"}), 400
 
     d = load_data()
-    if not is_username_approved_reseller(d, tg_username):
-        return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនទាន់ត្រូវបានម្ចាស់ហាងផ្តល់សិទ្ធិជា Reseller ទេ!"}), 403
+    if not is_username_approved_reseller(d, tg_username, tg_id):
+        u_clean = str(tg_username or "").lstrip("@").strip().lower()
+        if not u_clean:
+            err_msg = "គណនី Telegram របស់អ្នកមិនទាន់មាន @username ទេ! សូមដាក់ @username ក្នុង Telegram រួច Login ឡើងវិញ។"
+        else:
+            err_msg = f"Username @{u_clean} មិនទាន់មានក្នុងបញ្ជី Reseller ដែលបានអនុញ្ញាតទេ!"
+        return jsonify({"success": False, "error": err_msg, "checked_username": u_clean}), 403
     resellers = d.setdefault("resellers", {})
 
     if tg_id not in resellers:
@@ -744,7 +749,7 @@ def reseller_shop_toggle():
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
     eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
-    if not is_username_approved_reseller(d, eff_user):
+    if not is_username_approved_reseller(d, eff_user, tg_id):
         return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     resellers = d.setdefault("resellers", {})
     seller = resellers.setdefault(tg_id, {
@@ -766,7 +771,7 @@ def reseller_product_save():
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
     eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
-    if not is_username_approved_reseller(d, eff_user):
+    if not is_username_approved_reseller(d, eff_user, tg_id):
         return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     resellers = d.setdefault("resellers", {})
     resellers.setdefault(tg_id, {
@@ -847,7 +852,7 @@ def reseller_product_delete():
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
     eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
-    if not is_username_approved_reseller(d, eff_user):
+    if not is_username_approved_reseller(d, eff_user, tg_id):
         return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     if kind == "ACCOUNT":
         d["accounts"] = [
@@ -870,7 +875,7 @@ def reseller_withdraw():
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
     eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
-    if not is_username_approved_reseller(d, eff_user):
+    if not is_username_approved_reseller(d, eff_user, tg_id):
         return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     seller = d.get("resellers", {}).get(tg_id)
     if not seller:
@@ -933,14 +938,23 @@ def is_admin_request(d, payload: dict) -> bool:
             return True
     return False
 
-def is_username_approved_reseller(d, username: str) -> bool:
+def is_username_approved_reseller(d, username: str, tg_id: str = "") -> bool:
+    allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", []) if str(x).strip()]
     u = str(username or "").lstrip("@").strip().lower()
-    if not u:
-        return False
-    if u == ADMIN_USERNAME.lower():
-        return True
-    allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", [])]
-    return u in allowed
+    if u:
+        if u == ADMIN_USERNAME.lower() or u in allowed:
+            return True
+    tid = str(tg_id or "").strip()
+    if tid:
+        u_obj = d.get("users", {}).get(tid, {})
+        saved_u = str(u_obj.get("username", "")).lstrip("@").strip().lower()
+        if saved_u and (saved_u == ADMIN_USERNAME.lower() or saved_u in allowed):
+            return True
+        res_obj = d.get("resellers", {}).get(tid, {})
+        res_u = str(res_obj.get("username", "")).lstrip("@").strip().lower()
+        if res_u and (res_u == ADMIN_USERNAME.lower() or res_u in allowed):
+            return True
+    return False
 
 @app.route('/api/admin/resellers/list', methods=['POST'])
 def admin_resellers_list():
