@@ -8,6 +8,7 @@ import time
 import uuid
 import json
 import os
+import io
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -18,7 +19,7 @@ ABA_ROUTING_ID = "abaakhppxxx@abaa"
 ABA_ACCOUNT_NO = "010765908"
 ABA_MERCHANT_DISPLAY_NAME = "KTY STORE"
 
-# Telegram Bot ថ្មី & Group ID
+# Telegram Bot & Group ID
 TG_BOT_TOKEN = "9286576815:AAGW1VCYg8uZDqvGj5zATrnFaUjwghJpmqc"
 TG_GROUP_ID = "-1005852775918"
 ADMIN_USERNAME = "ktyofficial169"
@@ -77,6 +78,39 @@ def build_aba_khqr(amount_usd: float, bill_no: str, nonce: str) -> str:
         return qr_body + crc16_ccitt(qr_body)
     return raw_qr
 
+def send_telegram_group(text):
+    try:
+        url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
+        requests.post(url, json={
+            "chat_id": TG_GROUP_ID,
+            "text": text,
+            "parse_mode": "HTML"
+        }, timeout=5)
+    except Exception as e:
+        print("Telegram Error:", e)
+
+def backup_store_to_telegram(data_obj, pin_it=False):
+    """រក្សាទុក Backup store_data.json ទៅ Telegram Group ដើម្បីកុំឱ្យបាត់ពេល Render Deploy ថ្មី"""
+    try:
+        json_bytes = json.dumps(data_obj, ensure_ascii=False, indent=2).encode('utf-8')
+        url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendDocument"
+        files = {'document': ('store_data.json', io.BytesIO(json_bytes), 'application/json')}
+        payload = {
+            'chat_id': TG_GROUP_ID,
+            'caption': f"💾 Auto Backup KTY Store ({time.strftime('%Y-%m-%d %H:%M:%S')})",
+            'disable_notification': True
+        }
+        res = requests.post(url, files=files, data=payload, timeout=15).json()
+        if pin_it and res.get("ok") and res.get("result", {}).get("message_id"):
+            msg_id = res["result"]["message_id"]
+            requests.post(
+                f"https://api.telegram.org/bot{TG_BOT_TOKEN}/pinChatMessage",
+                json={"chat_id": TG_GROUP_ID, "message_id": msg_id, "disable_notification": True},
+                timeout=8
+            )
+    except Exception as e:
+        print("Backup note:", e)
+
 def load_initial_from_telegram_pinned():
     try:
         res = requests.get(f"https://api.telegram.org/bot{TG_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=8).json()
@@ -109,12 +143,19 @@ def load_data():
                 d.setdefault("users", {})
                 d.setdefault("orders", [])
                 d.setdefault("chats", {})
-                return d
+                if d.get("games") or d.get("banners") or d.get("items"):
+                    return d
         except Exception:
             pass
     cloud_data = load_initial_from_telegram_pinned()
     if cloud_data:
         return cloud_data
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
     save_data(DEFAULT_DATA)
     return DEFAULT_DATA
 
@@ -124,17 +165,6 @@ def save_data(data):
 
 if not os.path.exists(DATA_FILE):
     load_initial_from_telegram_pinned()
-
-def send_telegram_group(text):
-    try:
-        url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
-        requests.post(url, json={
-            "chat_id": TG_GROUP_ID,
-            "text": text,
-            "parse_mode": "HTML"
-        }, timeout=5)
-    except Exception as e:
-        print("Telegram Error:", e)
 
 def verify_telegram_auth(auth_data):
     check_hash = auth_data.get('hash')
@@ -200,6 +230,36 @@ def roblox_lookup():
     except Exception:
         return jsonify({"success": False, "error": "មិនអាចភ្ជាប់ទៅ Roblox API បានទេ សូមព្យាយាមម្តងទៀត!"}), 500
 
+def lookup_freefire_nickname(user_id: str):
+    """ព្យាយាមឆែកឈ្មោះ Free Fire តាម API ជាច្រើនប្រភព"""
+    endpoints = [
+        f"https://api.isan.eu.org/nickname/ff?id={user_id}",
+        f"https://freefire-api-six.vercel.app/get_player_info?id={user_id}",
+        f"https://api.ryzendesu.vip/api/stalk/ff?id={user_id}"
+    ]
+    for url in endpoints:
+        try:
+            r = requests.get(url, timeout=6)
+            if r.status_code != 200:
+                continue
+            data = r.json()
+            # ទម្រង់ទី 1: {"success": true, "name": "..."}
+            if isinstance(data, dict):
+                if data.get("success") and data.get("name"):
+                    return str(data["name"]).strip()
+                if data.get("nickname"):
+                    return str(data["nickname"]).strip()
+                if isinstance(data.get("data"), dict):
+                    inner = data["data"]
+                    for k in ("nickname", "name", "username", "player_name"):
+                        if inner.get(k):
+                            return str(inner[k]).strip()
+                if isinstance(data.get("basicInfo"), dict) and data["basicInfo"].get("nickname"):
+                    return str(data["basicInfo"]["nickname"]).strip()
+        except Exception:
+            continue
+    return None
+
 @app.route('/api/game/lookup', methods=['POST'])
 def game_lookup():
     payload = request.get_json(silent=True) or {}
@@ -215,21 +275,39 @@ def game_lookup():
             if not zone_id:
                 return jsonify({"success": False, "error": "សូមបញ្ចូល Server / Zone ID ផង!"}), 400
             url = f"https://api.isan.eu.org/nickname/ml?id={user_id}&zone={zone_id}"
-        elif game_type == "freefire":
-            url = f"https://api.isan.eu.org/nickname/ff?id={user_id}"
-        else:
-            return jsonify({"success": False, "error": "មិនគាំទ្រហ្គេមនេះទេ!"}), 400
+            res = requests.get(url, timeout=8).json()
+            if res.get("success") and res.get("name"):
+                return jsonify({
+                    "success": True,
+                    "nickname": res["name"],
+                    "user_id": user_id,
+                    "zone_id": zone_id
+                })
+            return jsonify({"success": False, "error": "❌ រកមិនឃើញគណនីនេះទេ! សូមពិនិត្យ ID ឡើងវិញ។"})
 
-        res = requests.get(url, timeout=10).json()
-        if res.get("success") and res.get("name"):
+        elif game_type == "freefire":
+            if not user_id.isdigit() or len(user_id) < 5:
+                return jsonify({"success": False, "error": "❌ Free Fire ID ត្រូវតែជាលេខយ៉ាងតិច ៥ ខ្ទង់!"})
+
+            nick = lookup_freefire_nickname(user_id)
+            if nick:
+                return jsonify({
+                    "success": True,
+                    "nickname": nick,
+                    "user_id": user_id,
+                    "zone_id": zone_id
+                })
+            # ប្រសិនបើ API ក្រៅមិនទាន់គាំទ្រ ID នេះ តែទម្រង់ ID ត្រឹមត្រូវ ឱ្យអាចបន្តទិញបានដោយមិនបង្អាក់ការបង់ប្រាក់
             return jsonify({
                 "success": True,
-                "nickname": res["name"],
+                "fallback": True,
+                "nickname": f"Player ID: {user_id}",
                 "user_id": user_id,
                 "zone_id": zone_id
             })
+
         else:
-            return jsonify({"success": False, "error": "❌ រកមិនឃើញគណនីនេះទេ! សូមពិនិត្យ ID ឡើងវិញ។"})
+            return jsonify({"success": False, "error": "មិនគាំទ្រហ្គេមនេះទេ!"}), 400
     except Exception:
         return jsonify({"success": False, "error": "⚠️ ប្រព័ន្ធឆែកឈ្មោះកំពុងរវល់ ប៉ុន្តែអ្នកអាចបន្តទិញបានធម្មតា។"}), 500
 
@@ -454,6 +532,7 @@ def save_admin_account():
         d["accounts"].append(new_acc)
 
     save_data(d)
+    backup_store_to_telegram(d, pin_it=True)
     return jsonify({"success": True})
 
 @app.route('/api/admin/account/delete', methods=['POST'])
@@ -463,6 +542,7 @@ def delete_admin_account():
     d = load_data()
     d["accounts"] = [a for a in d["accounts"] if a["id"] != acc_id]
     save_data(d)
+    backup_store_to_telegram(d, pin_it=True)
     return jsonify({"success": True})
 
 @app.route('/api/auth/telegram', methods=['POST'])
@@ -523,6 +603,7 @@ def update_store():
         d["games"] = new_data.get("games", d["games"])
         d["items"] = new_data.get("items", d["items"])
         save_data(d)
+        backup_store_to_telegram(d, pin_it=True)
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Invalid data"}), 400
 
