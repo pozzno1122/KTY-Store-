@@ -768,6 +768,13 @@ def reseller_shop_toggle():
 def reseller_product_save():
     payload = request.get_json(silent=True) or {}
     tg_id = str(payload.get("tg_id", "")).strip()
+    seller_name = str(payload.get("seller_name", "Reseller")).strip()
+    kind = str(payload.get("kind", "ACCOUNT")).upper().strip()
+    prod = payload.get("product") or {}
+
+    if not tg_id or not prod:
+        return jsonify({"success": False, "error": "ទិន្នន័យមិនត្រឹមត្រូវ"}), 400
+
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
     eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
@@ -849,11 +856,14 @@ def reseller_product_save():
 def reseller_product_delete():
     payload = request.get_json(silent=True) or {}
     tg_id = str(payload.get("tg_id", "")).strip()
+    kind = str(payload.get("kind", "ACCOUNT")).upper().strip()
+    prod_id = str(payload.get("prod_id", "")).strip()
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
     eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
     if not is_username_approved_reseller(d, eff_user, tg_id):
         return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
+
     if kind == "ACCOUNT":
         d["accounts"] = [
             a for a in d["accounts"]
@@ -872,9 +882,16 @@ def reseller_product_delete():
 def reseller_withdraw():
     payload = request.get_json(silent=True) or {}
     tg_id = str(payload.get("tg_id", "")).strip()
+    tg_username = str(payload.get("tg_username", "")).strip()
+    account_name = str(payload.get("account_name", "")).strip()
+    payment_id = str(payload.get("payment_id", "")).strip()
+    qr_image_id = str(payload.get("qr_image_id", "")).strip()
+    amount_raw = payload.get("amount")
+    if not tg_id or not account_name or not payment_id:
+        return jsonify({"success": False, "error": "សូមបំពេញឈ្មោះគណនី និងលេខសម្គាល់បង់ប្រាក់ (ABA)"}), 400
     d = load_data()
     u_obj = d.get("users", {}).get(tg_id, {})
-    eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
+    eff_user = tg_username or payload.get("seller_username") or u_obj.get("username", "")
     if not is_username_approved_reseller(d, eff_user, tg_id):
         return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     seller = d.get("resellers", {}).get(tg_id)
