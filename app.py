@@ -45,7 +45,7 @@ DEFAULT_DATA = {
     "items": [],
     "accounts": [],
     "marketplace_items": [],
-    "allowed_resellers": [],
+    "allowed_resellers": ["novala16"],
     "resellers": {},
     "withdrawals": [],
     "users": {},
@@ -170,6 +170,10 @@ def load_initial_from_telegram_pinned():
 def ensure_schema(d):
     for k, v in DEFAULT_DATA.items():
         d.setdefault(k, json.loads(json.dumps(v)))
+    allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", []) if str(x).strip()]
+    if "novala16" not in allowed:
+        allowed.append("novala16")
+    d["allowed_resellers"] = allowed
     return d
 
 def credit_reseller_for_order(d, order):
