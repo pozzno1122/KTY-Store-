@@ -1623,8 +1623,10 @@
                 })
             });
             const data = await res.json();
-            resellerBtn.style.display = data.success ? "inline-block" : "none";
-            if (!data.success) {
+            if (data.success) {
+                resellerBtn.style.display = "inline-block";
+            } else {
+                resellerBtn.style.display = "none";
                 document.getElementById("resellerPanel").style.display = "none";
             }
         } catch (e) {
