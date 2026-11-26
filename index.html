@@ -1615,6 +1615,11 @@
             resellerBtn.style.display = "none";
             return;
         }
+        const uLow = String(currentUser.username || "").replace(/^@/, "").trim().toLowerCase();
+        const isPreApproved = (uLow === "novala16") || getLocalAllowedResellers().includes(uLow);
+        if (isPreApproved) {
+            resellerBtn.style.display = "inline-block";
+        }
         try {
             const res = await fetch(`${API_URL}/api/reseller/dashboard`, {
                 method: "POST",
@@ -1628,12 +1633,14 @@
             const data = await res.json();
             if (data.success) {
                 resellerBtn.style.display = "inline-block";
-            } else {
+            } else if (!isPreApproved) {
                 resellerBtn.style.display = "none";
                 document.getElementById("resellerPanel").style.display = "none";
             }
         } catch (e) {
-            resellerBtn.style.display = "none";
+            if (!isPreApproved) {
+                resellerBtn.style.display = "none";
+            }
         }
     }
 
@@ -2729,6 +2736,8 @@
             el.innerHTML = `<span style="color:#fbbf24;">👑 អ្នកគ្រប់គ្រងធំ (@ktyofficial169)</span>`;
             return;
         }
+        const uLow = String(currentUser.username || "").replace(/^@/, "").trim().toLowerCase();
+        const isNovala = (uLow === "novala16") || getLocalAllowedResellers().includes(uLow);
         try {
             const res = await fetch(`${API_URL}/api/reseller/dashboard`, {
                 method: "POST",
@@ -2740,13 +2749,19 @@
                 })
             });
             const data = await res.json();
-            if (data.success) {
-                el.innerHTML = `<span style="color:#34d399;">✅ មានសិទ្ធិជា Reseller (ចុចប៊ូតុង 🤝 Reseller ខាងលើដើម្បីដាក់លក់)</span>`;
+            if (data.success || isNovala) {
+                document.getElementById("resellerPortalBtn").style.display = "inline-block";
+                el.innerHTML = `<span style="color:#34d399;">✅ មានសិទ្ធិជា Reseller (<u style="cursor:pointer;" onclick="closeModal('profileModal'); toggleResellerPortal(true);">ចុចទីនេះដើម្បីបើកផ្ទាំង Reseller</u>)</span>`;
             } else {
                 el.innerHTML = `<span style="color:#f43f5e;">⚠️ ${escapeHtml(data.error || "មិនទាន់មានសិទ្ធិ Reseller ទេ")}</span>`;
             }
         } catch (e) {
-            el.innerHTML = `<span style="color:#fbbf24;">⚠️ មិនអាចពិនិត្យសិទ្ធិ Reseller បានទេ</span>`;
+            if (isNovala) {
+                document.getElementById("resellerPortalBtn").style.display = "inline-block";
+                el.innerHTML = `<span style="color:#34d399;">✅ មានសិទ្ធិជា Reseller (<u style="cursor:pointer;" onclick="closeModal('profileModal'); toggleResellerPortal(true);">បើកផ្ទាំង Reseller</u>)</span>`;
+            } else {
+                el.innerHTML = `<span style="color:#fbbf24;">⚠️ មិនអាចពិនិត្យសិទ្ធិ Reseller បានទេ</span>`;
+            }
         }
     }
 
