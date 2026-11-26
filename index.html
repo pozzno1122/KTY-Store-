@@ -1810,39 +1810,55 @@
 
         const btn = document.getElementById("resProdSaveBtn");
         btn.disabled = true;
+        const reqBody = JSON.stringify({
+            tg_id: String(currentUser.id),
+            tg_username: currentUser.username || "",
+            seller_name: currentUser.first_name || "Reseller",
+            seller_username: currentUser.username || "",
+            kind: kind,
+            product: {
+                id: editingResellerProdId,
+                title: title,
+                name: title,
+                game_name: "Roblox",
+                price: price,
+                stock: stock,
+                description: desc,
+                acc_login: login,
+                acc_password: pass,
+                images: uploadedResellerImages
+            }
+        });
         try {
-            const res = await fetch(`${API_URL}/api/reseller/product/save`, {
+            let res = await fetch(`${API_URL}/api/reseller/product/save`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    tg_id: String(currentUser.id),
-                    seller_name: currentUser.first_name || "Reseller",
-                    seller_username: currentUser.username || "",
-                    kind: kind,
-                    product: {
-                        id: editingResellerProdId,
-                        title: title,
-                        name: title,
-                        game_name: "Roblox",
-                        price: price,
-                        stock: stock,
-                        description: desc,
-                        acc_login: login,
-                        acc_password: pass,
-                        images: uploadedResellerImages
-                    }
-                })
+                body: reqBody
             });
-            const data = await res.json();
+            if (!res.ok && res.status >= 500) {
+                await new Promise(r => setTimeout(r, 1500));
+                res = await fetch(`${API_URL}/api/reseller/product/save`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: reqBody
+                });
+            }
+            const rawText = await res.text();
+            let data = {};
+            try { data = JSON.parse(rawText); } catch (je) {
+                alert("⚠️ Server កំពុងដំណើរការឡើងវិញ (" + res.status + ") សូមចុចបង្ហោះម្តងទៀត!");
+                return;
+            }
             if (data.success) {
+                alert("✅ បានបង្ហោះលក់រួចរាល់!");
                 cancelEditResellerProduct();
                 await loadResellerDashboard();
                 await fetchStoreData();
             } else {
-                alert(data.error || "បរាជ័យ");
+                alert("⚠️ " + (data.error || "មិនអាចរក្សាទុកបានទេ!"));
             }
         } catch (e) {
-            alert("មិនអាចរក្សាទុកបានទេ!");
+            alert("⚠️ បញ្ហាការភ្ជាប់បណ្តាញ៖ មិនអាចរក្សាទុកបានទេ! សូមពិនិត្យអ៊ីនធឺណិត ហើយសាកល្បងម្តងទៀត។");
         } finally {
             btn.disabled = false;
         }
