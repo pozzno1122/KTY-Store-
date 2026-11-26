@@ -1517,537 +1517,759 @@ def check_payment():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# ==================== Owner-Only Telegram Control Bot (@ktyofficial169) ====================
-import threading
+# ==================== Integrated Telegram Admin Bot (@ktyofficial169 only) ====================
+import os
+import json
+import time
+import uuid
+import requests
 
-OWNER_BOT_TOKEN = "8681603461:AAHTBdVpAVAMxaDF7pZfiSwn9SPrN6w7kqM"
-OWNER_ONLY_USERNAME = "ktyofficial169"
+ADMIN_CTRL_BOT_TOKEN = "9108175209:AAHoT0Wq_7L0LeLFKuEmAv2CjzmtIjt2IqQ"
+API_URL = "https://kty-store.onrender.com"
+ADMIN_USERNAME = "ktyofficial169"
 
-_owner_bot_sessions = {}
-_owner_bot_thread_started = False
-_owner_bot_lock = threading.Lock()
+STORAGE_ADMIN_CTRL_BOT_TOKEN = "9286576815:AAGW1VCYg8uZDqvGj5zATrnFaUjwghJpmqc"
+STORAGE_BOT_TOKEN = STORAGE_ADMIN_CTRL_BOT_TOKEN
+MEDIA_ADMIN_CTRL_BOT_TOKEN = "9255176136:AAHL3yYdOnqtO26-DvtwzGG4bqQsXHsL8ew"
+TG_GROUP_ID = "-1005852775918"
 
-def owner_bot_api(method, payload=None, files=None, data=None):
-    url = f"https://api.telegram.org/bot{OWNER_BOT_TOKEN}/{method}"
-    if files:
-        return requests.post(url, files=files, data=data or {}, timeout=20).json()
-    return requests.post(url, json=payload or {}, timeout=12).json()
+BOT_DATA_FILE = DATA_FILE
 
-def owner_send(chat_id, text, reply_markup=None):
-    body = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+BOT_DEFAULT_DATA = {
+    "banners": [],
+    "games": [],
+    "items": [],
+    "accounts": [],
+    "marketplace_items": [],
+    "allowed_resellers": ["novala16"],
+    "resellers": {},
+    "withdrawals": [],
+    "users": {},
+    "orders": [],
+    "chats": {}
+}
+
+user_states = {}
+
+
+def tg_api(method, payload=None, files=None):
+    url = f"https://api.telegram.org/bot{ADMIN_CTRL_BOT_TOKEN}/{method}"
+    try:
+        if files:
+            r = requests.post(url, data=payload or {}, files=files, timeout=20)
+        else:
+            r = requests.post(url, json=payload or {}, timeout=20)
+        return r.json()
+    except Exception as e:
+        print(f"TG API error [{method}]:", e)
+        return {"ok": False, "error": str(e)}
+
+
+def send_msg(chat_id, text, reply_markup=None):
+    body = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML"
+    }
     if reply_markup:
         body["reply_markup"] = reply_markup
+    return tg_api("sendMessage", body)
+
+
+def answer_cb(cb_id, text=""):
+    return tg_api("answerCallbackQuery", {"callback_query_id": cb_id, "text": text, "show_alert": False})
+
+
+def is_authorized_owner(msg_or_cb):
+    user = msg_or_cb.get("from") or {}
+    uname = str(user.get("username") or "").lstrip("@").strip().lower()
+    return uname == ADMIN_USERNAME.lower()
+
+
+def bot_ensure_schema(d):
+    for k, v in BOT_DEFAULT_DATA.items():
+        d.setdefault(k, json.loads(json.dumps(v)))
+    allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", []) if str(x).strip()]
+    if "novala16" not in allowed:
+        allowed.append("novala16")
+    d["allowed_resellers"] = allowed
+    return d
+
+
+def bot_load_pinned_store_data():
     try:
-        owner_bot_api("sendMessage", body)
+        res = requests.get(f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/getChat?chat_id={TG_GROUP_ID}", timeout=10).json()
+        if res.get("ok"):
+            pinned = (res.get("result") or {}).get("pinned_message") or {}
+            doc = pinned.get("document")
+            if doc and doc.get("file_id"):
+                f_res = requests.get(f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/getFile?file_id={doc['file_id']}", timeout=10).json()
+                if f_res.get("ok"):
+                    fpath = f_res["result"]["file_path"]
+                    raw = requests.get(f"https://api.telegram.org/file/bot{STORAGE_BOT_TOKEN}/{fpath}", timeout=15).json()
+                    if isinstance(raw, dict):
+                        return bot_ensure_schema(raw)
     except Exception as e:
-        print("Owner bot send error:", e)
-
-def is_owner_tg_message(msg):
-    frm = msg.get("from") or {}
-    uname = str(frm.get("username") or "").lstrip("@").strip().lower()
-    return uname == OWNER_ONLY_USERNAME.lower()
-
-def store_photo_via_owner_bot(file_id):
-    """ទាញរូបភាពពី Owner Bot រួចរក្សាទុកក្នុង MEDIA_BOT/TG_GROUP ដើម្បីឱ្យ `/api/tg-image/<id>` បង្ហាញបានលើវេបសាយ"""
-    try:
-        info = requests.get(f"https://api.telegram.org/bot{OWNER_BOT_TOKEN}/getFile?file_id={file_id}", timeout=10).json()
-        if not info.get("ok"):
-            return ""
-        fpath = info["result"]["file_path"]
-        raw = requests.get(f"https://api.telegram.org/file/bot{OWNER_BOT_TOKEN}/{fpath}", timeout=15).content
-        for tok in (MEDIA_BOT_TOKEN, TG_BOT_TOKEN):
-            r = requests.post(
-                f"https://api.telegram.org/bot{tok}/sendPhoto",
-                files={"photo": ("item.jpg", io.BytesIO(raw), "image/jpeg")},
-                data={"chat_id": TG_GROUP_ID, "disable_notification": True},
-                timeout=20
-            ).json()
-            if r.get("ok"):
-                fid = r["result"]["photo"][-1]["file_id"]
-                return f"{tok[:8]}:{fid}"
-    except Exception as e:
-        print("Owner photo transfer error:", e)
-    return ""
-
-def owner_main_menu_keyboard():
-    return {
-        "keyboard": [
-            [{"text": "➕ បង្ហោះហ្គេម"}, {"text": "➕ បង្ហោះកញ្ចប់ Item ហ្គេម"}],
-            [{"text": "🔐 បង្ហោះគណនី"}, {"text": "💎 បង្ហោះអាយធីម"}],
-            [{"text": "🖼️ បង្ហោះ Banner"}, {"text": "🤝 គ្រប់គ្រង Reseller"}],
-            [{"text": "📦 បញ្ជីទំនិញ & Orders"}, {"text": "❌ បោះបង់ប្រតិបត្តិការ"}]
-        ],
-        "resize_keyboard": True
-    }
-
-def parse_bool_input(val):
-    s = str(val or "").strip().lower()
-    return s in ("1", "yes", "y", "true", "on", "បើក", "yes/បើក", "បាទ", "ចាស")
-
-def start_wizard(uid, mode):
-    if mode == "GAME":
-        _owner_bot_sessions[uid] = {
-            "mode": "GAME",
-            "step": 0,
-            "data": {
-                "id": f"game_{int(time.time())}",
-                "name": "",
-                "image": DEFAULT_GAME_ICON,
-                "input1_enabled": True,
-                "input1_label": "Username / ID",
-                "input1_placeholder": "",
-                "input2_enabled": False,
-                "input2_label": "Server ID",
-                "input2_placeholder": "",
-                "input_note": ""
-            }
-        }
-        return (
-            "🎮 <b>ចាប់ផ្ដើមបង្ហោះហ្គេមថ្មី (ជំហាន ១/៩)</b>\n"
-            "សូមបញ្ចូល <b>ឈ្មោះហ្គេម</b> (ឧ. Roblox, MLBB, Free Fire):"
-        )
-    elif mode == "GAME_ITEM":
-        d = load_data()
-        games = d.get("games", [])
-        if not games:
-            return "⚠️ មិនទាន់មានហ្គេមណាមួយក្នុងវេបសាយនៅឡើយទេ! សូមបង្ហោះហ្គេមជាមុនសិន។"
-        g_lines = "\n".join([f"• <code>{g['id']}</code> : <b>{g['name']}</b>" for g in games])
-        _owner_bot_sessions[uid] = {
-            "mode": "GAME_ITEM",
-            "step": 0,
-            "data": {"id": f"item_{int(time.time())}", "game_id": "", "name": "", "price": 0.0, "image": DEFAULT_ITEM_ICON}
-        }
-        return (
-            f"💎 <b>ចាប់ផ្ដើមបង្ហោះកញ្ចប់ Item ក្នុងហ្គេម (ជំហាន ១/៤)</b>\n"
-            f"បញ្ជីហ្គេមដែលមាន៖\n{g_lines}\n\n"
-            f"សូមវាយ <b>ID ហ្គេម</b> ឬ <b>ឈ្មោះហ្គេម</b>:"
-        )
-    elif mode == "ACCOUNT":
-        _owner_bot_sessions[uid] = {
-            "mode": "ACCOUNT",
-            "step": 0,
-            "data": {
-                "id": f"acc_{int(time.time())}",
-                "game_name": "Roblox",
-                "title": "",
-                "price": 0.0,
-                "stock": 1,
-                "description": "",
-                "acc_login": "",
-                "acc_password": "",
-                "images": []
-            }
-        }
-        return (
-            "🔐 <b>ចាប់ផ្ដើមបង្ហោះលក់គណនី (ជំហាន ១/៨)</b>\n"
-            "សូមបញ្ចូល <b>ប្រភេទហ្គេម</b> (ឧ. Roblox, MLBB, Free Fire):"
-        )
-    elif mode == "MARKET_ITEM":
-        _owner_bot_sessions[uid] = {
-            "mode": "MARKET_ITEM",
-            "step": 0,
-            "data": {
-                "id": f"ritem_{int(time.time())}_{uuid.uuid4().hex[:4]}",
-                "name": "",
-                "game_name": "Roblox",
-                "price": 0.0,
-                "stock": 5,
-                "description": "",
-                "image": "",
-                "images": []
-            }
-        }
-        return (
-            "🛍️ <b>ចាប់ផ្ដើមបង្ហោះលក់អាយធីម (ជំហាន ១/៦)</b>\n"
-            "សូមបញ្ចូល <b>ឈ្មោះអាយធីម</b> (ឧ. x20 Dragon Breath):"
-        )
-    elif mode == "BANNER":
-        _owner_bot_sessions[uid] = {"mode": "BANNER", "step": 0, "data": {}}
-        return "🖼️ សូមផ្ញើ <b>Link រូបភាព Banner</b> (ឬផ្ញើរូបភាព Banner ផ្ទាល់):"
-    return ""
-
-def process_wizard_step(uid, text, photo_file_id=""):
-    sess = _owner_bot_sessions.get(uid)
-    if not sess:
-        return None
-    mode = sess["mode"]
-    step = sess["step"]
-    data = sess["data"]
-
-    if mode == "BANNER":
-        img_url = text.strip()
-        if photo_file_id:
-            transferred = store_photo_via_owner_bot(photo_file_id)
-            if transferred:
-                img_url = f"{API_URL}/api/tg-image/{transferred}"
-        if not img_url:
-            return "⚠️ សូមបញ្ចូល Link រូបភាព ឬផ្ញើរូបភាព Banner!"
-        d = load_data()
-        d.setdefault("banners", []).append(img_url)
-        save_data(d)
-        _owner_bot_sessions.pop(uid, None)
-        return f"✅ បានបន្ថែម Banner រួចរាល់!\n🔗 {img_url}"
-
-    if mode == "GAME":
-        if step == 0:
-            if not text.strip(): return "⚠️ សូមបញ្ចូលឈ្មោះហ្គេម!"
-            data["name"] = text.strip()
-            sess["step"] = 1
-            return "🖼️ (ជំហាន ២/៩) បញ្ចូល <b>Link រូបភាព Logo ហ្គេម</b> (ឬវាយ <code>skip</code> ដើម្បីប្រើរូប Default):"
-        elif step == 1:
-            if text.strip().lower() != "skip" and text.strip():
-                data["image"] = text.strip()
-            sess["step"] = 2
-            return "📝 (ជំហាន ៣/៩) បើកប្រអប់សរសេរទី ១ ទេ? វាយ <b>បើក (yes)</b> ឬ <b>បិទ (no)</b>:"
-        elif step == 2:
-            data["input1_enabled"] = parse_bool_input(text)
-            if not data["input1_enabled"]:
-                sess["step"] = 5
-                return "📝 (ជំហាន ៦/៩) បើកប្រអប់សរសេរទី ២ ទេ? វាយ <b>បើក (yes)</b> ឬ <b>បិទ (no)</b>:"
-            sess["step"] = 3
-            return "🏷️ (ជំហាន ៤/៩) បញ្ចូល <b>ចំណងជើងប្រអប់ទី ១</b> (ឧ. User ID / Username Roblox):"
-        elif step == 3:
-            if text.strip(): data["input1_label"] = text.strip()
-            sess["step"] = 4
-            return "💬 (ជំហាន ៥/៩) បញ្ចូល <b>អក្សរគំរូក្នុងប្រអប់ទី ១</b> (ឬវាយ <code>skip</code>):"
-        elif step == 4:
-            if text.strip().lower() != "skip": data["input1_placeholder"] = text.strip()
-            sess["step"] = 5
-            return "📝 (ជំហាន ៦/៩) បើកប្រអប់សរសេរទី ២ ទេ? វាយ <b>បើក (yes)</b> ឬ <b>បិទ (no)</b>:"
-        elif step == 5:
-            data["input2_enabled"] = parse_bool_input(text)
-            if not data["input2_enabled"]:
-                sess["step"] = 8
-                return "📌 (ជំហាន ៩/៩) បញ្ចូល <b>អក្សរណែនាំខាងក្រោមប្រអប់</b> (ឬវាយ <code>skip</code>):"
-            sess["step"] = 6
-            return "🏷️ (ជំហាន ៧/៩) បញ្ចូល <b>ចំណងជើងប្រអប់ទី ២</b> (ឧ. Server ID / Zone ID):"
-        elif step == 6:
-            if text.strip(): data["input2_label"] = text.strip()
-            sess["step"] = 7
-            return "💬 (ជំហាន ៨/៩) បញ្ចូល <b>អក្សរគំរូក្នុងប្រអប់ទី ២</b> (ឬវាយ <code>skip</code>):"
-        elif step == 7:
-            if text.strip().lower() != "skip": data["input2_placeholder"] = text.strip()
-            sess["step"] = 8
-            return "📌 (ជំហាន ៩/៩) បញ្ចូល <b>អក្សរណែនាំខាងក្រោមប្រអប់</b> (ឬវាយ <code>skip</code>):"
-        elif step == 8:
-            if text.strip().lower() != "skip": data["input_note"] = text.strip()
-            d = load_data()
-            d.setdefault("games", []).append(data)
-            save_data(d)
-            _owner_bot_sessions.pop(uid, None)
-            return f"✅ បានបង្ហោះហ្គេម <b>{data['name']}</b> (ID: <code>{data['id']}</code>) ចូលវេបសាយរួចរាល់!"
-
-    if mode == "GAME_ITEM":
-        if step == 0:
-            q = text.strip().lower()
-            d = load_data()
-            matched = next((g for g in d.get("games", []) if g["id"].lower() == q or g["name"].lower() == q), None)
-            if not matched:
-                return "⚠️ រកមិនឃើញហ្គេមនេះទេ! សូមវាយ ID ឬឈ្មោះហ្គេមឱ្យត្រឹមត្រូវ:"
-            data["game_id"] = matched["id"]
-            data["_game_name"] = matched["name"]
-            sess["step"] = 1
-            return f"💎 (ជំហាន ២/៤) បញ្ចូល <b>ឈ្មោះកញ្ចប់ Item</b> សម្រាប់ <b>{matched['name']}</b> (ឧ. 80 Robux):"
-        elif step == 1:
-            if not text.strip(): return "⚠️ សូមបញ្ចូលឈ្មោះកញ្ចប់ Item!"
-            data["name"] = text.strip()
-            sess["step"] = 2
-            return "💵 (ជំហាន ៣/៤) បញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 1.00):"
-        elif step == 2:
-            try:
-                p = round(float(text.strip()), 2)
-                if p <= 0: raise ValueError()
-            except Exception:
-                return "⚠️ តម្លៃត្រូវតែជាលេខធំជាង 0 (ឧ. 1.00):"
-            data["price"] = p
-            sess["step"] = 3
-            return "🖼️ (ជំហាន ៤/៤) បញ្ចូល <b>Link រូបភាព Item</b> (ឬវាយ <code>skip</code>):"
-        elif step == 3:
-            if text.strip().lower() != "skip" and text.strip():
-                data["image"] = text.strip()
-            d = load_data()
-            clean_item = {k: v for k, v in data.items() if not k.startswith("_")}
-            d.setdefault("items", []).append(clean_item)
-            save_data(d)
-            _owner_bot_sessions.pop(uid, None)
-            return f"✅ បានបង្ហោះកញ្ចប់ <b>{data['name']}</b> (${data['price']:.2f}) ក្នុងហ្គេម <b>{data.get('_game_name','')}</b> រួចរាល់!"
-
-    if mode == "ACCOUNT":
-        if step == 0:
-            if text.strip(): data["game_name"] = text.strip()
-            sess["step"] = 1
-            return "🏷️ (ជំហាន ២/៨) បញ្ចូល <b>ឈ្មោះគណនី / ចំណងជើងលក់</b>:"
-        elif step == 1:
-            if not text.strip(): return "⚠️ សូមបញ្ចូលឈ្មោះគណនី!"
-            data["title"] = text.strip()
-            sess["step"] = 2
-            return "💵 (ជំហាន ៣/៨) បញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 5.00):"
-        elif step == 2:
-            try:
-                p = round(float(text.strip()), 2)
-                if p <= 0: raise ValueError()
-            except Exception:
-                return "⚠️ តម្លៃមិនត្រឹមត្រូវ! សូមវាយលេខ (ឧ. 5.00):"
-            data["price"] = p
-            sess["step"] = 3
-            return "📦 (ជំហាន ៤/៨) បញ្ចូល <b>ចំនួនស្តុក</b> (ឧ. 1):"
-        elif step == 3:
-            try:
-                st = int(text.strip())
-                if st < 0: raise ValueError()
-            except Exception:
-                return "⚠️ ស្តុកត្រូវតែជាចំនួនគត់ (ឧ. 1):"
-            data["stock"] = st
-            sess["step"] = 4
-            return "📋 (ជំហាន ៥/៨) បញ្ចូល <b>ព័ត៌មានលម្អិតអំពីគណនី</b> (ឬវាយ <code>skip</code>):"
-        elif step == 4:
-            if text.strip().lower() != "skip": data["description"] = text.strip()
-            sess["step"] = 5
-            return "📧 (ជំហាន ៦/៨) បញ្ចូល <b>Gmail ឬ Username គណនីហ្គេម</b>:"
-        elif step == 5:
-            if not text.strip(): return "⚠️ សូមបញ្ចូល Gmail ឬ Username!"
-            data["acc_login"] = text.strip()
-            sess["step"] = 6
-            return "🔑 (ជំហាន ៧/៨) បញ្ចូល <b>ពាក្យសម្ងាត់ (Password)</b> គណនី:"
-        elif step == 6:
-            if not text.strip(): return "⚠️ សូមបញ្ចូល Password!"
-            data["acc_password"] = text.strip()
-            sess["step"] = 7
-            return "🖼️ (ជំហាន ៨/៨) ផ្ញើ <b>រូបភាពគណនី</b> (អតិបរមា ១០ រូប) រួចវាយ <code>done</code> ដើម្បីបង្ហោះ (ឬវាយ <code>done</code> ភ្លាមបើមិនមានរូប):"
-        elif step == 7:
-            if text.strip().lower() == "done":
-                d = load_data()
-                d.setdefault("accounts", []).append(data)
-                save_data(d)
-                _owner_bot_sessions.pop(uid, None)
-                return f"✅ បានបង្ហោះលក់គណនី <b>{data['title']}</b> (${data['price']:.2f} | រូប: {len(data['images'])}) រួចរាល់!"
-            if photo_file_id:
-                if len(data["images"]) >= 10:
-                    return "⚠️ គ្រប់ ១០ រូបហើយ! សូមវាយ <code>done</code> ដើម្បីបង្ហោះ។"
-                transferred = store_photo_via_owner_bot(photo_file_id)
-                if transferred:
-                    data["images"].append(transferred)
-                    return f"📸 បានរក្សារូបទី {len(data['images'])}/10! ផ្ញើរូបបន្ថែម ឬវាយ <code>done</code> ដើម្បីបង្ហោះ។"
-                return "⚠️ មិនអាចផ្ទុករូបភាពនេះបានទេ សូមសាកល្បងម្ដងទៀត។"
-            return "សូមផ្ញើរូបភាព ឬវាយ <code>done</code> ដើម្បីបញ្ចប់ការបង្ហោះ។"
-
-    if mode == "MARKET_ITEM":
-        if step == 0:
-            if not text.strip(): return "⚠️ សូមបញ្ចូលឈ្មោះអាយធីម!"
-            data["name"] = text.strip()
-            sess["step"] = 1
-            return "🎮 (ជំហាន ២/៦) បញ្ចូល <b>ឈ្មោះហ្គេម</b> (ឧ. Roblox):"
-        elif step == 1:
-            if text.strip(): data["game_name"] = text.strip()
-            sess["step"] = 2
-            return "💵 (ជំហាន ៣/៦) បញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 1.20):"
-        elif step == 2:
-            try:
-                p = round(float(text.strip()), 2)
-                if p <= 0: raise ValueError()
-            except Exception:
-                return "⚠️ តម្លៃមិនត្រឹមត្រូវ! សូមវាយលេខ (ឧ. 1.20):"
-            data["price"] = p
-            sess["step"] = 3
-            return "📦 (ជំហាន ៤/៦) បញ្ចូល <b>ចំនួនស្តុក</b> (ឧ. 5):"
-        elif step == 3:
-            try:
-                st = int(text.strip())
-                if st < 0: raise ValueError()
-            except Exception:
-                return "⚠️ ស្តុកត្រូវតែជាចំនួនគត់ (ឧ. 5):"
-            data["stock"] = st
-            sess["step"] = 4
-            return "📋 (ជំហាន ៥/៦) បញ្ចូល <b>ព័ត៌មានលម្អិតអាយធីម</b> (ឬវាយ <code>skip</code>):"
-        elif step == 4:
-            if text.strip().lower() != "skip": data["description"] = text.strip()
-            sess["step"] = 5
-            return "🖼️ (ជំហាន ៦/៦) ផ្ញើ <b>រូបភាពអាយធីម</b> (អតិបរមា ១០ រូប) រួចវាយ <code>done</code> ដើម្បីបង្ហោះ:"
-        elif step == 5:
-            if text.strip().lower() == "done":
-                data["image"] = data["images"][0] if data["images"] else ""
-                d = load_data()
-                d.setdefault("marketplace_items", []).append(data)
-                save_data(d)
-                _owner_bot_sessions.pop(uid, None)
-                return f"✅ បានបង្ហោះលក់អាយធីម <b>{data['name']}</b> (${data['price']:.2f} | ស្តុក: {data['stock']}) រួចរាល់!"
-            if photo_file_id:
-                if len(data["images"]) >= 10:
-                    return "⚠️ គ្រប់ ១០ រូបហើយ! សូមវាយ <code>done</code> ដើម្បីបង្ហោះ។"
-                transferred = store_photo_via_owner_bot(photo_file_id)
-                if transferred:
-                    data["images"].append(transferred)
-                    return f"📸 បានរក្សារូបទី {len(data['images'])}/10! ផ្ញើរូបបន្ថែម ឬវាយ <code>done</code> ដើម្បីបង្ហោះ។"
-                return "⚠️ មិនអាចផ្ទុករូបភាពនេះបានទេ សូមសាកល្បងម្ដងទៀត។"
-            return "សូមផ្ញើរូបភាព ឬវាយ <code>done</code> ដើម្បីបញ្ចប់ការបង្ហោះ។"
-
+        print("Load pinned error:", e)
     return None
 
-def handle_owner_bot_update(upd):
-    msg = upd.get("message") or upd.get("edited_message")
-    if not msg:
+
+def bot_load_store():
+    d = None
+    if os.path.exists(BOT_DATA_FILE):
+        try:
+            with open(BOT_DATA_FILE, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+                if isinstance(raw, dict):
+                    d = ensure_schema(raw)
+        except Exception:
+            d = None
+    if d is None or (not d.get("games") and not d.get("banners") and not d.get("items") and not d.get("accounts")):
+        cloud = bot_load_pinned_store_data()
+        if cloud:
+            d = cloud
+        elif d is None:
+            d = json.loads(json.dumps(BOT_DEFAULT_DATA))
+    return bot_ensure_schema(d)
+
+
+def bot_save_store(d, pin_backup=True):
+    ensure_schema(d)
+    with open(BOT_DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False, indent=2)
+
+    if pin_backup:
+        try:
+            json_bytes = json.dumps(d, ensure_ascii=False, indent=2).encode("utf-8")
+            url = f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/sendDocument"
+            files = {"document": ("store_data.json", json_bytes, "application/json")}
+            data = {
+                "chat_id": TG_GROUP_ID,
+                "caption": f"Bot Sync Store ({time.strftime('%Y-%m-%d %H:%M:%S')})",
+                "disable_notification": True
+            }
+            res = requests.post(url, files=files, data=data, timeout=20).json()
+            if res.get("ok") and res.get("result", {}).get("message_id"):
+                msg_id = res["result"]["message_id"]
+                requests.post(
+                    f"https://api.telegram.org/bot{STORAGE_BOT_TOKEN}/pinChatMessage",
+                    json={"chat_id": TG_GROUP_ID, "message_id": msg_id, "disable_notification": True},
+                    timeout=10
+                )
+        except Exception as e:
+            print("Pin backup error:", e)
+
+
+def upload_photo_to_media_bot(file_id_from_admin_bot):
+    try:
+        g = tg_api("getFile", {"file_id": file_id_from_admin_bot})
+        if not g.get("ok"):
+            return f"{MEDIA_BOT_TOKEN[:8]}:{file_id_from_admin_bot}"
+        fpath = g["result"]["file_path"]
+        raw = requests.get(f"https://api.telegram.org/file/bot{ADMIN_CTRL_BOT_TOKEN}/{fpath}", timeout=20).content
+        url = f"https://api.telegram.org/bot{MEDIA_BOT_TOKEN}/sendPhoto"
+        res = requests.post(
+            url,
+            files={"photo": ("item.jpg", raw, "image/jpeg")},
+            data={"chat_id": TG_GROUP_ID, "disable_notification": True},
+            timeout=20
+        ).json()
+        if res.get("ok"):
+            new_fid = res["result"]["photo"][-1]["file_id"]
+            return f"{MEDIA_BOT_TOKEN[:8]}:{new_fid}"
+    except Exception as e:
+        print("Reupload photo error:", e)
+    return f"{MEDIA_BOT_TOKEN[:8]}:{file_id_from_admin_bot}"
+
+
+def main_menu_keyboard():
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "បង្ហោះហ្គេមថ្មី", "callback_data": "menu_add_game"},
+                {"text": "បង្ហោះ Item ក្នុងហ្គេម", "callback_data": "menu_add_game_item"}
+            ],
+            [
+                {"text": "បង្ហោះលក់គណនី", "callback_data": "menu_add_account"},
+                {"text": "បង្ហោះលក់អាយធីម", "callback_data": "menu_add_market_item"}
+            ],
+            [
+                {"text": "បង្ហោះ Banner", "callback_data": "menu_add_banner"},
+                {"text": "គ្រប់គ្រង Reseller", "callback_data": "menu_resellers"}
+            ],
+            [
+                {"text": "មើលទំនិញ & លុប", "callback_data": "menu_manage_list"},
+                {"text": "ការបញ្ជាទិញ (Orders)", "callback_data": "menu_orders"}
+            ]
+        ]
+    }
+
+
+def start_flow(uid, chat_id, flow_name, extra=None):
+    user_states[uid] = {
+        "flow": flow_name,
+        "step": 0,
+        "data": extra or {}
+    }
+    prompt_current_step(uid, chat_id)
+
+
+def prompt_current_step(uid, chat_id):
+    st = user_states.get(uid)
+    if not st:
         return
-    if not is_owner_tg_message(msg):
-        # Strictly deny any user other than @ktyofficial169
-        frm = msg.get("from") or {}
-        if frm.get("id"):
-            owner_send(frm["id"], "⛔ Bot នេះអនុញ្ញាតឱ្យប្រើបានតែម្ចាស់វេបសាយ <b>@ktyofficial169</b> ម្នាក់ប៉ុណ្ណោះ។")
+    flow = st["flow"]
+    step = st["step"]
+    data = st["data"]
+
+    cancel_kb = {"inline_keyboard": [[{"text": "បោះបង់", "callback_data": "cancel_flow"}]]}
+
+    if flow == "add_banner":
+        send_msg(chat_id, "<b>បង្ហោះ Banner ថ្មី</b>\nសូមផ្ញើ <b>Link រូបភាព Banner</b> (ទំហំ 16:9):", cancel_kb)
+
+    elif flow == "add_game":
+        if step == 0:
+            send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (១/៦)</b>\nសូមបញ្ចូល <b>ឈ្មោះហ្គេម</b> (ឧ. Roblox, MLBB, Free Fire):", cancel_kb)
+        elif step == 1:
+            send_msg(chat_id, "<b>បង្ហោះហ្គេមថ្មី (២/៦)</b>\nសូមផ្ញើ <b>Link រូបភាព Logo ហ្គេម</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+        elif step == 2:
+            send_msg(
+                chat_id,
+                "<b>បង្ហោះហ្គេមថ្មី (៣/៦)</b>\nតើត្រូវបើក <b>ប្រអប់សរសេរទី ១</b> (User ID / Username) ទេ?\nវាយ <code>yes</code> ឬ <code>no</code>:",
+                cancel_kb
+            )
+        elif step == 3:
+            if not data.get("input1_enabled"):
+                st["step"] = 4
+                prompt_current_step(uid, chat_id)
+                return
+            send_msg(chat_id, "សូមបញ្ចូល <b>ចំណងជើងប្រអប់ទី ១</b> (ឧ. Roblox Username ឬ User ID):", cancel_kb)
+        elif step == 31:
+            send_msg(chat_id, "សូមបញ្ចូល <b>អក្សរគំរូ (Placeholder) ប្រអប់ទី ១</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+        elif step == 4:
+            send_msg(
+                chat_id,
+                "<b>បង្ហោះហ្គេមថ្មី (៤/៦)</b>\nតើត្រូវបើក <b>ប្រអប់សរសេរទី ២</b> (Server ID / Zone ID) ទេ?\nវាយ <code>yes</code> ឬ <code>no</code>:",
+                cancel_kb
+            )
+        elif step == 5:
+            if not data.get("input2_enabled"):
+                st["step"] = 6
+                prompt_current_step(uid, chat_id)
+                return
+            send_msg(chat_id, "សូមបញ្ចូល <b>ចំណងជើងប្រអប់ទី ២</b> (ឧ. Server ID / Zone ID):", cancel_kb)
+        elif step == 51:
+            send_msg(chat_id, "សូមបញ្ចូល <b>អក្សរគំរូ (Placeholder) ប្រអប់ទី ២</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+        elif step == 6:
+            send_msg(
+                chat_id,
+                "<b>បង្ហោះហ្គេមថ្មី (៦/៦)</b>\nសូមបញ្ចូល <b>អក្សរណែនាំខាងក្រោមប្រអប់បំពេញព័ត៌មាន</b> (ឬវាយ <code>skip</code>):",
+                cancel_kb
+            )
+
+    elif flow == "add_game_item":
+        d = bot_load_store()
+        if step == 0:
+            games = d.get("games", [])
+            if not games:
+                user_states.pop(uid, None)
+                send_msg(chat_id, "មិនទាន់មានហ្គេមណាមួយទេ! សូមបង្ហោះហ្គេមជាមុនសិន។", main_menu_keyboard())
+                return
+            kb_rows = []
+            for g in games:
+                kb_rows.append([{"text": f"Game: {g['name']}", "callback_data": f"pick_game_for_item:{g['id']}"}])
+            kb_rows.append([{"text": "បោះបង់", "callback_data": "cancel_flow"}])
+            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item ក្នុងហ្គេម (១/៤)</b>\nជ្រើសរើសហ្គេម៖", {"inline_keyboard": kb_rows})
+        elif step == 1:
+            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item (២/៤)</b>\nសូមបញ្ចូល <b>ឈ្មោះកញ្ចប់ Item</b> (ឧ. 80 Robux):", cancel_kb)
+        elif step == 2:
+            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item (៣/៤)</b>\nសូមបញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 1.00):", cancel_kb)
+        elif step == 3:
+            send_msg(chat_id, "<b>បង្ហោះកញ្ចប់ Item (៤/៤)</b>\nសូមផ្ញើ <b>Link រូបភាព Item</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+
+    elif flow == "add_account":
+        if step == 0:
+            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (១/៧)</b>\nសូមបញ្ចូល <b>ប្រភេទហ្គេម</b> (ឧ. Roblox, MLBB, Free Fire):", cancel_kb)
+        elif step == 1:
+            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (២/៧)</b>\nសូមបញ្ចូល <b>ឈ្មោះគណនី / ចំណងជើងលក់</b>:", cancel_kb)
+        elif step == 2:
+            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៣/៧)</b>\nសូមបញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 5.00):", cancel_kb)
+        elif step == 3:
+            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៤/៧)</b>\nសូមបញ្ចូល <b>ចំនួនស្តុក</b> (ឧ. 1):", cancel_kb)
+        elif step == 4:
+            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៥/៧)</b>\nសូមបញ្ចូល <b>ព័ត៌មានលម្អិតអំពីគណនី</b> (ឬវាយ <code>skip</code>):", cancel_kb)
+        elif step == 5:
+            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៦/៧)</b>\nសូមបញ្ចូល <b>Gmail ឬ Username គណនីហ្គេម</b>:", cancel_kb)
+        elif step == 6:
+            send_msg(chat_id, "<b>បង្ហោះលក់គណនី (៧/៧)</b>\nសូមបញ្ចូល <b>ពាក្យសម្ងាត់ (Password)</b> គណនី:", cancel_kb)
+        elif step == 7:
+            kb = {
+                "inline_keyboard": [
+                    [{"text": "រួចរាល់ / បង្ហោះឥឡូវនេះ", "callback_data": "finish_account_upload"}],
+                    [{"text": "បោះបង់", "callback_data": "cancel_flow"}]
+                ]
+            }
+            cnt = len(data.get("images", []))
+            send_msg(
+                chat_id,
+                f"<b>ផ្ញើរូបភាពគណនី (បានផ្ញើ៖ {cnt}/10 រូប)</b>\nផ្ញើរូបភាពចូលឆាតនេះ រួចចុច <b>រួចរាល់ / បង្ហោះឥឡូវនេះ</b> (ឬវាយ <code>skip</code>)។",
+                kb
+            )
+
+    elif flow == "add_market_item":
+        if step == 0:
+            send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (១/៤)</b>\nសូមបញ្ចូល <b>ឈ្មោះ Item</b> (ឧ. x20 Dragon Breath):", cancel_kb)
+        elif step == 1:
+            send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (២/៤)</b>\nសូមបញ្ចូល <b>តម្លៃ ($ USD)</b> (ឧ. 1.20):", cancel_kb)
+        elif step == 2:
+            send_msg(chat_id, "<b>បង្ហោះលក់អាយធីម (៣/៤)</b>\nសូមបញ្ចូល <b>ចំនួនស្តុក</b> (ឧ. 5):", cancel_kb)
+        elif step == 3:
+            kb = {
+                "inline_keyboard": [
+                    [{"text": "រួចរាល់ / បង្ហោះ Item ឥឡូវនេះ", "callback_data": "finish_market_item_upload"}],
+                    [{"text": "បោះបង់", "callback_data": "cancel_flow"}]
+                ]
+            }
+            cnt = len(data.get("images", []))
+            send_msg(
+                chat_id,
+                f"<b>ផ្ញើរូបភាព Item (បានផ្ញើ៖ {cnt}/10 រូប)</b>\nផ្ញើរូបភាពចូលឆាតនេះ រួចចុច <b>រួចរាល់ / បង្ហោះ Item ឥឡូវនេះ</b> (ឬវាយ <code>skip</code>)។",
+                kb
+            )
+
+    elif flow == "add_reseller":
+        send_msg(chat_id, "<b>បន្ថែមអ្នកលក់បន្ត (Reseller)</b>\nសូមបញ្ចូល <b>Telegram Username</b> (ឧ. @novala16):", cancel_kb)
+
+
+def handle_text_step(uid, chat_id, text):
+    st = user_states.get(uid)
+    if not st:
+        return False
+    flow = st["flow"]
+    step = st["step"]
+    data = st["data"]
+    low = text.strip().lower()
+
+    if flow == "add_banner":
+        d = bot_load_store()
+        d["banners"].append(text.strip())
+        bot_save_store(d, pin_backup=True)
+        user_states.pop(uid, None)
+        send_msg(chat_id, "បានបន្ថែម Banner រួចរាល់!", main_menu_keyboard())
+        return True
+
+    if flow == "add_game":
+        if step == 0:
+            data["name"] = text.strip()
+            st["step"] = 1
+        elif step == 1:
+            data["image"] = "" if low == "skip" else text.strip()
+            st["step"] = 2
+        elif step == 2:
+            data["input1_enabled"] = low in ("yes", "y", "1", "true", "បាទ", "ចាស", "បើក")
+            st["step"] = 3
+        elif step == 3:
+            data["input1_label"] = text.strip() or "Username / ID"
+            st["step"] = 31
+        elif step == 31:
+            data["input1_placeholder"] = "" if low == "skip" else text.strip()
+            st["step"] = 4
+        elif step == 4:
+            data["input2_enabled"] = low in ("yes", "y", "1", "true", "បាទ", "ចាស", "បើក")
+            st["step"] = 5
+        elif step == 5:
+            data["input2_label"] = text.strip() or "Server ID"
+            st["step"] = 51
+        elif step == 51:
+            data["input2_placeholder"] = "" if low == "skip" else text.strip()
+            st["step"] = 6
+        elif step == 6:
+            data["input_note"] = "" if low == "skip" else text.strip()
+            d = bot_load_store()
+            game_obj = {
+                "id": "game_" + str(int(time.time())),
+                "name": data.get("name", "Game"),
+                "image": data.get("image") or "https://cdn-icons-png.flaticon.com/512/686/686589.png",
+                "input1_enabled": bool(data.get("input1_enabled", True)),
+                "input1_label": data.get("input1_label", "Username / ID"),
+                "input1_placeholder": data.get("input1_placeholder", ""),
+                "input2_enabled": bool(data.get("input2_enabled", False)),
+                "input2_label": data.get("input2_label", "Server ID"),
+                "input2_placeholder": data.get("input2_placeholder", ""),
+                "input_note": data.get("input_note", "")
+            }
+            d["games"].append(game_obj)
+            bot_save_store(d, pin_backup=True)
+            user_states.pop(uid, None)
+            send_msg(chat_id, f"បានបង្ហោះហ្គេម <b>{game_obj['name']}</b> រួចរាល់!", main_menu_keyboard())
+            return True
+
+        prompt_current_step(uid, chat_id)
+        return True
+
+    if flow == "add_game_item":
+        if step == 1:
+            data["name"] = text.strip()
+            st["step"] = 2
+        elif step == 2:
+            try:
+                val = float(text.strip())
+                if val <= 0:
+                    send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
+                    return True
+                data["price"] = round(val, 2)
+                st["step"] = 3
+            except Exception:
+                send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 1.00):")
+                return True
+        elif step == 3:
+            img = "" if low == "skip" else text.strip()
+            d = bot_load_store()
+            item_obj = {
+                "id": "item_" + str(int(time.time())),
+                "game_id": data.get("game_id"),
+                "name": data.get("name", "Item"),
+                "price": data.get("price", 1.0),
+                "image": img or "https://cdn-icons-png.flaticon.com/512/616/616490.png"
+            }
+            d["items"].append(item_obj)
+            bot_save_store(d, pin_backup=True)
+            user_states.pop(uid, None)
+            send_msg(chat_id, f"បានបង្ហោះកញ្ចប់ Item <b>{item_obj['name']}</b> (${item_obj['price']:.2f}) រួចរាល់!", main_menu_keyboard())
+            return True
+
+        prompt_current_step(uid, chat_id)
+        return True
+
+    if flow == "add_account":
+        if step == 0:
+            data["game_name"] = text.strip()
+            st["step"] = 1
+        elif step == 1:
+            data["title"] = text.strip()
+            st["step"] = 2
+        elif step == 2:
+            try:
+                val = float(text.strip())
+                if val <= 0:
+                    send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
+                    return True
+                data["price"] = round(val, 2)
+                st["step"] = 3
+            except Exception:
+                send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 5.00):")
+                return True
+        elif step == 3:
+            try:
+                data["stock"] = max(0, int(text.strip()))
+                st["step"] = 4
+            except Exception:
+                send_msg(chat_id, "សូមបញ្ចូលចំនួនស្តុកជាលេខគត់ (ឧ. 1):")
+                return True
+        elif step == 4:
+            data["description"] = "" if low == "skip" else text.strip()
+            st["step"] = 5
+        elif step == 5:
+            data["acc_login"] = text.strip()
+            st["step"] = 6
+        elif step == 6:
+            data["acc_password"] = text.strip()
+            data["images"] = []
+            st["step"] = 7
+        elif step == 7 and low == "skip":
+            return finalize_account_post(uid, chat_id)
+
+        prompt_current_step(uid, chat_id)
+        return True
+
+    if flow == "add_market_item":
+        if step == 0:
+            data["name"] = text.strip()
+            st["step"] = 1
+        elif step == 1:
+            try:
+                val = float(text.strip())
+                if val <= 0:
+                    send_msg(chat_id, "តម្លៃត្រូវតែធំជាង 0! សូមបញ្ចូលម្តងទៀត:")
+                    return True
+                data["price"] = round(val, 2)
+                st["step"] = 2
+            except Exception:
+                send_msg(chat_id, "សូមបញ្ចូលតម្លៃជាលេខ (ឧ. 1.20):")
+                return True
+        elif step == 2:
+            try:
+                data["stock"] = max(0, int(text.strip()))
+                data["images"] = []
+                st["step"] = 3
+            except Exception:
+                send_msg(chat_id, "សូមបញ្ចូលចំនួនស្តុកជាលេខគត់ (ឧ. 5):")
+                return True
+        elif step == 3 and low == "skip":
+            return finalize_market_item_post(uid, chat_id)
+
+        prompt_current_step(uid, chat_id)
+        return True
+
+    if flow == "add_reseller":
+        uname = text.strip().lstrip("@").strip().lower()
+        if not uname:
+            send_msg(chat_id, "សូមបញ្ចូល Username ឱ្យត្រឹមត្រូវ:")
+            return True
+        d = bot_load_store()
+        allowed = d.setdefault("allowed_resellers", [])
+        if uname not in allowed:
+            allowed.append(uname)
+        bot_save_store(d, pin_backup=True)
+        user_states.pop(uid, None)
+        send_msg(chat_id, f"បានផ្តល់សិទ្ធិ Reseller ជូន <b>@{uname}</b> រួចរាល់!", main_menu_keyboard())
+        return True
+
+    return False
+
+
+def finalize_account_post(uid, chat_id):
+    st = user_states.pop(uid, None) or {}
+    data = st.get("data") or {}
+    d = bot_load_store()
+    imgs = (data.get("images") or [])[:10]
+    acc_obj = {
+        "id": f"acc_{int(time.time())}",
+        "title": data.get("title", "Account"),
+        "game_name": data.get("game_name", "Roblox"),
+        "price": data.get("price", 1.0),
+        "stock": data.get("stock", 1),
+        "description": data.get("description", ""),
+        "acc_login": data.get("acc_login", ""),
+        "acc_password": data.get("acc_password", ""),
+        "images": imgs,
+        "seller_id": "",
+        "seller_name": ""
+    }
+    d["accounts"].append(acc_obj)
+    bot_save_store(d, pin_backup=True)
+    send_msg(
+        chat_id,
+        f"<b>បានបង្ហោះលក់គណនីរួចរាល់!</b>\n"
+        f"• ហ្គេម៖ <b>{acc_obj['game_name']}</b>\n"
+        f"• ឈ្មោះ៖ <b>{acc_obj['title']}</b>\n"
+        f"• តម្លៃ៖ <b>${acc_obj['price']:.2f}</b> | ស្តុក៖ <b>{acc_obj['stock']}</b>",
+        main_menu_keyboard()
+    )
+    return True
+
+
+def finalize_market_item_post(uid, chat_id):
+    st = user_states.pop(uid, None) or {}
+    data = st.get("data") or {}
+    d = bot_load_store()
+    imgs = (data.get("images") or [])[:10]
+    first_img = imgs[0] if imgs else ""
+    m_obj = {
+        "id": f"ritem_{int(time.time())}_{uuid.uuid4().hex[:4]}",
+        "name": data.get("name", "Item"),
+        "game_name": "Roblox",
+        "price": data.get("price", 1.0),
+        "stock": data.get("stock", 1),
+        "description": "",
+        "image": first_img,
+        "images": imgs,
+        "seller_id": "",
+        "seller_name": ""
+    }
+    d.setdefault("marketplace_items", []).append(m_obj)
+    bot_save_store(d, pin_backup=True)
+    send_msg(
+        chat_id,
+        f"<b>បានបង្ហោះលក់អាយធីមរួចរាល់!</b>\n"
+        f"• ឈ្មោះ Item៖ <b>{m_obj['name']}</b>\n"
+        f"• តម្លៃ៖ <b>${m_obj['price']:.2f}</b> | ស្តុក៖ <b>{m_obj['stock']}</b>",
+        main_menu_keyboard()
+    )
+    return True
+
+
+def handle_photo_step(uid, chat_id, msg):
+    st = user_states.get(uid)
+    if not st or st["flow"] not in ("add_account", "add_market_item") or st["step"] not in (7, 3):
+        return False
+    photos = msg.get("photo") or []
+    if not photos:
+        return False
+    raw_fid = photos[-1]["file_id"]
+    encoded_fid = upload_photo_to_media_bot(raw_fid)
+    imgs = st["data"].setdefault("images", [])
+    if len(imgs) < 10:
+        imgs.append(encoded_fid)
+    prompt_current_step(uid, chat_id)
+    return True
+
+
+def handle_callback(cb):
+    if not is_authorized_owner(cb):
+        answer_cb(cb["id"])
         return
 
-    chat_id = msg["chat"]["id"]
-    uid = str(msg["from"]["id"])
-    text = str(msg.get("text") or msg.get("caption") or "").strip()
+    cb_id = cb["id"]
+    msg = cb.get("message") or {}
+    chat_id = (msg.get("chat") or {}).get("id")
+    uid = str((cb.get("from") or {}).get("id") or "")
+    data_str = cb.get("data") or ""
 
-    photo_file_id = ""
-    if msg.get("photo"):
-        photo_file_id = msg["photo"][-1]["file_id"]
+    answer_cb(cb_id)
 
-    # Cancel wizard
-    if text in ("❌ បោះបង់ប្រតិបត្តិការ", "/cancel"):
-        _owner_bot_sessions.pop(uid, None)
-        owner_send(chat_id, "✅ បានបោះបង់ប្រតិបត្តិការ។", owner_main_menu_keyboard())
-        return
-
-    # Quick commands
-    if text.startswith("/start") or text.startswith("/help"):
-        _owner_bot_sessions.pop(uid, None)
-        help_txt = (
-            "👑 <b>ផ្ទាំងបញ្ជាផ្ទាល់សម្រាប់ @ktyofficial169</b>\n"
-            "មានតែអ្នកម្នាក់ប៉ុណ្ណោះដែលមានសិទ្ធិប្រើប្រាស់ Bot នេះ។\n\n"
-            "• <b>➕ បង្ហោះហ្គេម</b> : បង្ហោះហ្គេម + ប្រអប់ Input 1/2 + Note\n"
-            "• <b>➕ បង្ហោះកញ្ចប់ Item ហ្គេម</b> : បង្ហោះកញ្ចប់ Item ក្នុងហ្គេម\n"
-            "• <b>🔐 បង្ហោះគណនី</b> : បង្ហោះគណនី + User/Gmail + Password + រូបភាព\n"
-            "• <b>💎 បង្ហោះអាយធីម</b> : បង្ហោះអាយធីម + តម្លៃ + ស្តុក + រូបភាព\n"
-            "• <b>🖼️ បង្ហោះ Banner</b> : បង្ហោះ Banner\n"
-            "• <b>🤝 គ្រប់គ្រង Reseller</b> : <code>/reseller_add @user</code> | <code>/reseller_del @user</code> | <code>/resellers</code>\n"
-            "• <b>📦 បញ្ជីទំនិញ & Orders</b> : <code>/orders</code> | <code>/game_del ID</code> | <code>/acc_del ID</code> | <code>/item_del ID</code>"
-        )
-        owner_send(chat_id, help_txt, owner_main_menu_keyboard())
+    if data_str == "cancel_flow":
+        user_states.pop(uid, None)
+        send_msg(chat_id, "បានបោះបង់។", main_menu_keyboard())
         return
 
-    if text == "➕ បង្ហោះហ្គេម":
-        owner_send(chat_id, start_wizard(uid, "GAME"), owner_main_menu_keyboard())
-        return
-    if text == "➕ បង្ហោះកញ្ចប់ Item ហ្គេម":
-        owner_send(chat_id, start_wizard(uid, "GAME_ITEM"), owner_main_menu_keyboard())
-        return
-    if text == "🔐 បង្ហោះគណនី":
-        owner_send(chat_id, start_wizard(uid, "ACCOUNT"), owner_main_menu_keyboard())
-        return
-    if text == "💎 បង្ហោះអាយធីម":
-        owner_send(chat_id, start_wizard(uid, "MARKET_ITEM"), owner_main_menu_keyboard())
-        return
-    if text == "🖼️ បង្ហោះ Banner":
-        owner_send(chat_id, start_wizard(uid, "BANNER"), owner_main_menu_keyboard())
-        return
-
-    if text == "🤝 គ្រប់គ្រង Reseller" or text == "/resellers":
-        d = load_data()
+    if data_str == "menu_add_game":
+        start_flow(uid, chat_id, "add_game")
+    elif data_str == "menu_add_game_item":
+        start_flow(uid, chat_id, "add_game_item")
+    elif data_str == "menu_add_account":
+        start_flow(uid, chat_id, "add_account")
+    elif data_str == "menu_add_market_item":
+        start_flow(uid, chat_id, "add_market_item")
+    elif data_str == "menu_add_banner":
+        start_flow(uid, chat_id, "add_banner")
+    elif data_str == "finish_account_upload":
+        finalize_account_post(uid, chat_id)
+    elif data_str == "finish_market_item_upload":
+        finalize_market_item_post(uid, chat_id)
+    elif data_str.startswith("pick_game_for_item:"):
+        gid = data_str.split(":", 1)[1]
+        if uid in user_states:
+            user_states[uid]["data"]["game_id"] = gid
+            user_states[uid]["step"] = 1
+            prompt_current_step(uid, chat_id)
+    elif data_str == "menu_resellers":
+        d = bot_load_store()
         allowed = d.get("allowed_resellers", [])
-        lst = "\n".join([f"• @{u}" for u in allowed]) or "(មិនទាន់មាន)"
-        owner_send(
+        txt = "<b>បញ្ជី Reseller ដែលបានអនុញ្ញាត៖</b>\n" + ("\n".join(f"• @{u}" for u in allowed) if allowed else "• មិនទាន់មាន")
+        kb = {
+            "inline_keyboard": [
+                [{"text": "បន្ថែម Reseller", "callback_data": "action_add_reseller"}],
+                [{"text": "ត្រឡប់ទៅម៉ឺនុយដើម", "callback_data": "back_main"}]
+            ]
+        }
+        send_msg(chat_id, txt, kb)
+    elif data_str == "action_add_reseller":
+        start_flow(uid, chat_id, "add_reseller")
+    elif data_str == "menu_manage_list":
+        d = bot_load_store()
+        lines = ["<b>ទំនិញដែលកំពុងដាក់លក់៖</b>"]
+        kb = []
+        for g in d.get("games", []):
+            lines.append(f"Game: {g['name']}")
+            kb.append([{"text": f"លុប Game: {g['name']}", "callback_data": f"del_game:{g['id']}"}])
+        for a in d.get("accounts", []):
+            lines.append(f"Account: {a['title']} (${a['price']})")
+            kb.append([{"text": f"លុប Account: {a['title'][:20]}", "callback_data": f"del_acc:{a['id']}"}])
+        for m in d.get("marketplace_items", []):
+            lines.append(f"Item: {m['name']} (${m['price']})")
+            kb.append([{"text": f"លុប Item: {m['name'][:20]}", "callback_data": f"del_mitem:{m['id']}"}])
+        kb.append([{"text": "ត្រឡប់ទៅម៉ឺនុយដើម", "callback_data": "back_main"}])
+        send_msg(chat_id, "\n".join(lines), {"inline_keyboard": kb})
+    elif data_str.startswith("del_game:"):
+        gid = data_str.split(":", 1)[1]
+        d = bot_load_store()
+        d["games"] = [x for x in d.get("games", []) if x["id"] != gid]
+        d["items"] = [x for x in d.get("items", []) if x.get("game_id") != gid]
+        bot_save_store(d, pin_backup=True)
+        send_msg(chat_id, "បានលុបហ្គេមរួចរាល់!", main_menu_keyboard())
+    elif data_str.startswith("del_acc:"):
+        aid = data_str.split(":", 1)[1]
+        d = bot_load_store()
+        d["accounts"] = [x for x in d.get("accounts", []) if x["id"] != aid]
+        bot_save_store(d, pin_backup=True)
+        send_msg(chat_id, "បានលុបគណនីរួចរាល់!", main_menu_keyboard())
+    elif data_str.startswith("del_mitem:"):
+        mid = data_str.split(":", 1)[1]
+        d = bot_load_store()
+        d["marketplace_items"] = [x for x in d.get("marketplace_items", []) if x["id"] != mid]
+        bot_save_store(d, pin_backup=True)
+        send_msg(chat_id, "បានលុបអាយធីមរួចរាល់!", main_menu_keyboard())
+    elif data_str == "menu_orders":
+        d = bot_load_store()
+        orders = list(reversed(d.get("orders", [])))[:8]
+        if not orders:
+            send_msg(chat_id, "មិនទាន់មានការបញ្ជាទិញនៅឡើយទេ។", main_menu_keyboard())
+            return
+        lines = ["<b>ការបញ្ជាទិញចុងក្រោយ៖</b>"]
+        for o in orders:
+            lines.append(f"• <code>{o.get('bill_number')}</code> | {o.get('item_name')} (${o.get('amount')}) | {o.get('status')}")
+        send_msg(chat_id, "\n".join(lines), main_menu_keyboard())
+    elif data_str == "back_main":
+        user_states.pop(uid, None)
+        send_msg(chat_id, "<b>ផ្ទាំងបញ្ជា @ktyofficial169</b>", main_menu_keyboard())
+
+
+def handle_message(msg):
+    if not is_authorized_owner(msg):
+        return
+
+    chat_id = (msg.get("chat") or {}).get("id")
+    uid = str((msg.get("from") or {}).get("id") or "")
+    if not chat_id or not uid:
+        return
+
+    if handle_photo_step(uid, chat_id, msg):
+        return
+
+    text = (msg.get("text") or "").strip()
+    if not text:
+        return
+
+    if text in ("/start", "/menu", "/cancel"):
+        user_states.pop(uid, None)
+        send_msg(
             chat_id,
-            f"🤝 <b>បញ្ជី Reseller ដែលបានអនុញ្ញាត៖</b>\n{lst}\n\n"
-            f"• ថែម Reseller: <code>/reseller_add novala16</code>\n"
-            f"• ដក Reseller: <code>/reseller_del novala16</code>"
+            "<b>សួស្តី @ktyofficial169!</b>\nជ្រើសរើសមុខងារដែលអ្នកចង់បញ្ជា៖",
+            main_menu_keyboard()
         )
         return
 
-    if text.startswith("/reseller_add "):
-        uname = text.split(" ", 1)[1].lstrip("@").strip().lower()
-        if uname:
-            d = load_data()
-            allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", [])]
-            if uname not in allowed:
-                allowed.append(uname)
-            d["allowed_resellers"] = allowed
-            save_data(d)
-            owner_send(chat_id, f"✅ បានផ្តល់សិទ្ធិ Reseller ដល់ <b>@{uname}</b> រួចរាល់!")
+    if handle_text_step(uid, chat_id, text):
         return
 
-    if text.startswith("/reseller_del "):
-        uname = text.split(" ", 1)[1].lstrip("@").strip().lower()
-        if uname:
-            d = load_data()
-            d["allowed_resellers"] = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", []) if str(x).lstrip("@").strip().lower() != uname]
-            save_data(d)
-            owner_send(chat_id, f"✅ បានដកសិទ្ធិ Reseller របស់ <b>@{uname}</b> រួចរាល់!")
-        return
+    send_msg(chat_id, "<b>ម៉ឺនុយគ្រប់គ្រងសម្រាប់ @ktyofficial169 ប៉ុណ្ណោះ៖</b>", main_menu_keyboard())
 
-    if text == "📦 បញ្ជីទំនិញ & Orders" or text == "/orders":
-        d = load_data()
-        g_txt = "\n".join([f"• <code>{g['id']}</code> : {g['name']}" for g in d.get("games", [])]) or "(ទទេ)"
-        a_txt = "\n".join([f"• <code>{a['id']}</code> : {a['title']} (${a['price']} | ស្តុក:{a['stock']})" for a in d.get("accounts", [])]) or "(ទទេ)"
-        m_txt = "\n".join([f"• <code>{m['id']}</code> : {m['name']} (${m['price']} | ស្តុក:{m.get('stock',0)})" for m in d.get("marketplace_items", [])]) or "(ទទេ)"
-        o_list = list(reversed(d.get("orders", [])))[:8]
-        o_txt = "\n".join([f"• <code>{o['bill_number']}</code> : {o['item_name']} (${o['amount']}) [{o.get('fulfillment_status') or o.get('status')}]" for o in o_list]) or "(ទទេ)"
-        owner_send(
-            chat_id,
-            f"🎮 <b>ហ្គេម ({len(d.get('games', []))}):</b>\n{g_txt}\n\n"
-            f"🔐 <b>គណនី ({len(d.get('accounts', []))}):</b>\n{a_txt}\n\n"
-            f"💎 <b>អាយធីម ({len(d.get('marketplace_items', []))}):</b>\n{m_txt}\n\n"
-            f"📜 <b>Orders ចុងក្រោយ:</b>\n{o_txt}\n\n"
-            f"លុប៖ <code>/game_del ID</code> | <code>/acc_del ID</code> | <code>/item_del ID</code>"
-        )
-        return
 
-    if text.startswith("/game_del "):
-        gid = text.split(" ", 1)[1].strip()
-        d = load_data()
-        d["games"] = [g for g in d.get("games", []) if g["id"] != gid]
-        d["items"] = [i for i in d.get("items", []) if i.get("game_id") != gid]
-        save_data(d)
-        owner_send(chat_id, f"✅ បានលុបហ្គេម <code>{gid}</code> រួចរាល់!")
-        return
-
-    if text.startswith("/acc_del "):
-        aid = text.split(" ", 1)[1].strip()
-        d = load_data()
-        d["accounts"] = [a for a in d.get("accounts", []) if a["id"] != aid]
-        save_data(d)
-        owner_send(chat_id, f"✅ បានលុបគណនី <code>{aid}</code> រួចរាល់!")
-        return
-
-    if text.startswith("/item_del "):
-        iid = text.split(" ", 1)[1].strip()
-        d = load_data()
-        d["marketplace_items"] = [m for m in d.get("marketplace_items", []) if m["id"] != iid]
-        save_data(d)
-        owner_send(chat_id, f"✅ បានលុបអាយធីម <code>{iid}</code> រួចរាល់!")
-        return
-
-    if uid in _owner_bot_sessions:
-        reply = process_wizard_step(uid, text, photo_file_id)
-        if reply:
-            owner_send(chat_id, reply, owner_main_menu_keyboard())
-        return
-
-    owner_send(chat_id, "សូមជ្រើសរើសប៊ូតុងមុខងារខាងក្រោម ឬវាយ <code>/help</code>។", owner_main_menu_keyboard())
-
-def _owner_bot_poll_loop():
-    offset = None
+def run_bot():
+    print(f"Starting Admin Bot restricted strictly to @{ADMIN_USERNAME}...")
+    offset = 0
     while True:
         try:
-            params = {"timeout": 25}
-            if offset is not None:
-                params["offset"] = offset
-            res = requests.get(f"https://api.telegram.org/bot{OWNER_BOT_TOKEN}/getUpdates", params=params, timeout=32).json()
+            res = tg_api("getUpdates", {"offset": offset, "timeout": 25})
             if res.get("ok"):
                 for upd in res.get("result", []):
                     offset = upd["update_id"] + 1
-                    handle_owner_bot_update(upd)
-        except Exception:
+                    if "message" in upd:
+                        handle_message(upd["message"])
+                    elif "callback_query" in upd:
+                        handle_callback(upd["callback_query"])
+        except Exception as e:
+            print("Poll loop error:", e)
             time.sleep(3)
 
-def ensure_owner_bot_running():
-    global _owner_bot_thread_started
-    with _owner_bot_lock:
-        if not _owner_bot_thread_started:
-            t = threading.Thread(target=_owner_bot_poll_loop, daemon=True)
-            t.start()
-            _owner_bot_thread_started = True
 
-ensure_owner_bot_running()
+
+import threading
+
+_admin_bot_started = False
+_admin_bot_lock = threading.Lock()
+
+def start_admin_bot_background():
+    global _admin_bot_started
+    with _admin_bot_lock:
+        if _admin_bot_started:
+            return
+        _admin_bot_started = True
+        t = threading.Thread(target=run_bot, daemon=True, name="KtyAdminBotThread")
+        t.start()
+
+start_admin_bot_background()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
