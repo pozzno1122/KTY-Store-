@@ -1415,11 +1415,14 @@
 
             if (data.success && data.nickname) {
                 verifiedGameNickname = data.nickname;
+                const badgeLabel = data.fallback
+                    ? "✅ ID ត្រឹមត្រូវ (ត្រៀមបញ្ចូល)"
+                    : "✅ រកឃើញគណនីត្រឹមត្រូវ";
                 resultEl.innerHTML = `
                     <div class="roblox-profile-card" style="display:flex;">
                         <img src="${selectedGame.image || DEFAULT_GAME_ICON}" onerror="this.src='${DEFAULT_GAME_ICON}'" style="border-radius:12px;">
                         <div style="text-align:left; overflow:hidden;">
-                            <div style="font-size:11px; color:#10b981; font-weight:bold;">✅ រកឃើញគណនីត្រឹមត្រូវ</div>
+                            <div style="font-size:11px; color:#10b981; font-weight:bold;">${badgeLabel}</div>
                             <div style="font-size:15px; font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(data.nickname)}</div>
                             <div style="font-size:11px; color:#cbd5e1;">ID: ${escapeHtml(uid)} ${zid ? '(' + escapeHtml(zid) + ')' : ''}</div>
                         </div>
