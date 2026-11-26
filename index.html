@@ -3221,7 +3221,7 @@
                 alert("⚠️ " + (data.error || "មិនអាចបង្ហោះ Item បានទេ!"));
             }
         } catch (e) {
-            alert("⚠️ មិនអាចភ្ជាប់ទៅ Server ដើម្បីបង្ហោះ Item បានទេ!");
+            alert("⚠️ មិនអាចភ្ជាប់ទៅ Server ដើម្បីបង្ហោះ Item បានទេ! (" + (e && e.message ? e.message : "Failed to fetch") + ")\nServer: " + API_URL);
         } finally {
             if (btn) { btn.disabled = false; btn.innerText = prevText; }
         }
