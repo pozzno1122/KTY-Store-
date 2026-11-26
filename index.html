@@ -2718,10 +2718,40 @@
         return `<span style="color:#fbbf24;">រង់ចាំបញ្ជាក់</span>`;
     }
 
+
+    async function checkResellerStatusInProfile() {
+        const el = document.getElementById("resellerAccessStatusNote");
+        if (!el || !currentUser) return;
+        if (isAdminUser()) {
+            el.innerHTML = `<span style="color:#fbbf24;">👑 អ្នកគ្រប់គ្រងធំ (@ktyofficial169)</span>`;
+            return;
+        }
+        try {
+            const res = await fetch(`${API_URL}/api/reseller/dashboard`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tg_id: String(currentUser.id),
+                    tg_name: currentUser.first_name || "Reseller",
+                    tg_username: currentUser.username || ""
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                el.innerHTML = `<span style="color:#34d399;">✅ មានសិទ្ធិជា Reseller (ចុចប៊ូតុង 🤝 Reseller ខាងលើដើម្បីដាក់លក់)</span>`;
+            } else {
+                el.innerHTML = `<span style="color:#f43f5e;">⚠️ ${escapeHtml(data.error || "មិនទាន់មានសិទ្ធិ Reseller ទេ")}</span>`;
+            }
+        } catch (e) {
+            el.innerHTML = `<span style="color:#fbbf24;">⚠️ មិនអាចពិនិត្យសិទ្ធិ Reseller បានទេ</span>`;
+        }
+    }
+
     async function openProfileModal() {
         if (!currentUser) return;
         document.getElementById("profileTitle").innerText = currentUser.first_name;
-        document.getElementById("profileSub").innerText = `@${currentUser.username || 'NoUsername'} | ID: ${currentUser.id}`;
+        document.getElementById("profileSub").innerHTML = `@${escapeHtml(currentUser.username || 'NoUsername')} | ID: ${escapeHtml(currentUser.id)}<br><span id="resellerAccessStatusNote" style="font-size:11px; color:#94a3b8;">កំពុងពិនិត្យសិទ្ធិ Reseller...</span>`;
+        checkResellerStatusInProfile();
         const listEl = document.getElementById("orderHistoryList");
         listEl.innerHTML = "⏳ កំពុងទាញយកប្រវត្តិការទិញ...";
         document.getElementById("profileModal").style.display = "flex";
