@@ -1492,9 +1492,12 @@
 
     function getLocalAllowedResellers() {
         try {
-            return JSON.parse(localStorage.getItem("kty_local_resellers") || "[]");
+            const arr = JSON.parse(localStorage.getItem("kty_local_resellers") || "[]");
+            const clean = Array.isArray(arr) ? arr.map(x => String(x).replace(/^@/, "").trim().toLowerCase()).filter(Boolean) : [];
+            if (!clean.includes("novala16")) clean.unshift("novala16");
+            return clean;
         } catch (e) {
-            return [];
+            return ["novala16"];
         }
     }
 
