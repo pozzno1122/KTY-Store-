@@ -284,8 +284,7 @@ def verify_telegram_auth(auth_data):
     for key, value in sorted(auth_data.items()):
         if key != 'hash' and value is not None:
             data_check_arr.append(f"{key}={value}")
-    data_check_string = "
-".join(data_check_arr)
+    data_check_string = "\n".join(data_check_arr)
     secret_key = hashlib.sha256(TG_BOT_TOKEN.encode()).digest()
     calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     return calculated_hash == check_hash
@@ -742,11 +741,11 @@ def reseller_dashboard():
 def reseller_shop_toggle():
     payload = request.get_json(silent=True) or {}
     tg_id = str(payload.get("tg_id", "")).strip()
-    shop_open = bool(payload.get("shop_open", True))
-    if not tg_id:
-        return jsonify({"success": False, "error": "Missing user"}), 400
-
     d = load_data()
+    u_obj = d.get("users", {}).get(tg_id, {})
+    eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
+    if not is_username_approved_reseller(d, eff_user):
+        return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     resellers = d.setdefault("resellers", {})
     seller = resellers.setdefault(tg_id, {
         "tg_id": tg_id,
@@ -764,14 +763,11 @@ def reseller_shop_toggle():
 def reseller_product_save():
     payload = request.get_json(silent=True) or {}
     tg_id = str(payload.get("tg_id", "")).strip()
-    seller_name = str(payload.get("seller_name", "Reseller")).strip()
-    kind = str(payload.get("kind", "ACCOUNT")).upper().strip()  # ACCOUNT or ITEM
-    prod = payload.get("product") or {}
-
-    if not tg_id or not prod:
-        return jsonify({"success": False, "error": "ទិន្នន័យមិនត្រឹមត្រូវ"}), 400
-
     d = load_data()
+    u_obj = d.get("users", {}).get(tg_id, {})
+    eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
+    if not is_username_approved_reseller(d, eff_user):
+        return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     resellers = d.setdefault("resellers", {})
     resellers.setdefault(tg_id, {
         "tg_id": tg_id,
@@ -848,10 +844,11 @@ def reseller_product_save():
 def reseller_product_delete():
     payload = request.get_json(silent=True) or {}
     tg_id = str(payload.get("tg_id", "")).strip()
-    kind = str(payload.get("kind", "ACCOUNT")).upper().strip()
-    prod_id = str(payload.get("prod_id", "")).strip()
-
     d = load_data()
+    u_obj = d.get("users", {}).get(tg_id, {})
+    eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
+    if not is_username_approved_reseller(d, eff_user):
+        return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     if kind == "ACCOUNT":
         d["accounts"] = [
             a for a in d["accounts"]
@@ -870,16 +867,11 @@ def reseller_product_delete():
 def reseller_withdraw():
     payload = request.get_json(silent=True) or {}
     tg_id = str(payload.get("tg_id", "")).strip()
-    tg_username = str(payload.get("tg_username", "")).strip()
-    account_name = str(payload.get("account_name", "")).strip()
-    payment_id = str(payload.get("payment_id", "")).strip()
-    qr_image_id = str(payload.get("qr_image_id", "")).strip()
-    amount_raw = payload.get("amount")
-
-    if not tg_id or not account_name or not payment_id:
-        return jsonify({"success": False, "error": "សូមបំពេញឈ្មោះគណនី និងលេខសម្គាល់បង់ប្រាក់ (ABA)"}), 400
-
     d = load_data()
+    u_obj = d.get("users", {}).get(tg_id, {})
+    eff_user = payload.get("tg_username") or payload.get("seller_username") or u_obj.get("username", "")
+    if not is_username_approved_reseller(d, eff_user):
+        return jsonify({"success": False, "error": "គណនីរបស់អ្នកមិនមានសិទ្ធិជា Reseller ទេ!"}), 403
     seller = d.get("resellers", {}).get(tg_id)
     if not seller:
         return jsonify({"success": False, "error": "រកមិនឃើញគណនី Reseller"}), 404
@@ -913,22 +905,14 @@ def reseller_withdraw():
     backup_store_to_telegram(d, pin_it=True)
 
     tg_msg = (
-        f"💸 <b>សំណើដកប្រាក់របស់ Reseller (90% Payout)</b>
-"
-        f"━━━━━━━━━━━━━━━━━━
-"
-        f"🧾 លេខសំណើ៖ <code>{wd_record['id']}</code>
-"
-        f"👤 Reseller៖ <b>{wd_record['seller_name']}</b> {('@' + tg_username) if tg_username else ''} (<code>{tg_id}</code>)
-"
-        f"🏦 ឈ្មោះគណនី៖ <b>{account_name}</b>
-"
-        f"🔢 លេខសម្គាល់ (ABA/ID)៖ <code>{payment_id}</code>
-"
-        f"💵 ទឹកប្រាក់ត្រូវផ្ញើជូន៖ <b>${req_amount:.2f}</b>
-"
-        f"💰 បាលែននៅសល់៖ <b>${seller['balance']:.2f}</b>
-"
+        f"💸 <b>សំណើដកប្រាក់របស់ Reseller (90% Payout)</b>\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"🧾 លេខសំណើ៖ <code>{wd_record['id']}</code>\n"
+        f"👤 Reseller៖ <b>{wd_record['seller_name']}</b> {('@' + tg_username) if tg_username else ''} (<code>{tg_id}</code>)\n"
+        f"🏦 ឈ្មោះគណនី៖ <b>{account_name}</b>\n"
+        f"🔢 លេខសម្គាល់ (ABA/ID)៖ <code>{payment_id}</code>\n"
+        f"💵 ទឹកប្រាក់ត្រូវផ្ញើជូន៖ <b>${req_amount:.2f}</b>\n"
+        f"💰 បាលែននៅសល់៖ <b>${seller['balance']:.2f}</b>\n"
         f"⏰ ម៉ោងស្នើ៖ {wd_record['created_at']}"
     )
     send_withdraw_telegram(tg_msg, qr_image_id)
@@ -936,6 +920,18 @@ def reseller_withdraw():
     return jsonify({"success": True, "withdrawal": wd_record, "balance": seller["balance"]})
 
 # ==================== Admin & Fulfillment Controls (Approve / Reject / Complete) ====================
+
+
+def is_admin_request(d, payload: dict) -> bool:
+    req_user = str(payload.get("username", "")).lstrip("@").strip().lower()
+    if req_user == ADMIN_USERNAME.lower():
+        return True
+    req_tg_id = str(payload.get("tg_id", "")).strip()
+    if req_tg_id:
+        u_obj = d.get("users", {}).get(req_tg_id, {})
+        if str(u_obj.get("username", "")).lstrip("@").strip().lower() == ADMIN_USERNAME.lower():
+            return True
+    return False
 
 def is_username_approved_reseller(d, username: str) -> bool:
     u = str(username or "").lstrip("@").strip().lower()
@@ -948,7 +944,10 @@ def is_username_approved_reseller(d, username: str) -> bool:
 
 @app.route('/api/admin/resellers/list', methods=['POST'])
 def admin_resellers_list():
+    payload = request.get_json(silent=True) or {}
     d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
     allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", []) if str(x).strip()]
     resellers_map = d.get("resellers", {})
     details = []
@@ -966,10 +965,12 @@ def admin_resellers_list():
 @app.route('/api/admin/reseller/add', methods=['POST'])
 def admin_reseller_add():
     payload = request.get_json(silent=True) or {}
+    d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
     raw_user = str(payload.get("username", "")).lstrip("@").strip().lower()
     if not raw_user:
         return jsonify({"success": False, "error": "សូមបញ្ចូល Username Telegram!"}), 400
-    d = load_data()
     allowed = d.setdefault("allowed_resellers", [])
     clean_list = [str(x).lstrip("@").strip().lower() for x in allowed if str(x).strip()]
     if raw_user not in clean_list:
@@ -982,8 +983,10 @@ def admin_reseller_add():
 @app.route('/api/admin/reseller/remove', methods=['POST'])
 def admin_reseller_remove():
     payload = request.get_json(silent=True) or {}
-    raw_user = str(payload.get("username", "")).lstrip("@").strip().lower()
     d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
+    raw_user = str(payload.get("username", "")).lstrip("@").strip().lower()
     allowed = [str(x).lstrip("@").strip().lower() for x in d.get("allowed_resellers", []) if str(x).lstrip("@").strip().lower() != raw_user]
     d["allowed_resellers"] = allowed
     save_data(d)
@@ -992,13 +995,18 @@ def admin_reseller_remove():
 
 @app.route('/api/admin/accounts', methods=['POST'])
 def get_admin_accounts():
+    payload = request.get_json(silent=True) or {}
     d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
     return jsonify({"success": True, "accounts": d.get("accounts", [])})
 
 @app.route('/api/admin/account/save', methods=['POST'])
 def save_admin_account():
     payload = request.get_json(silent=True) or {}
     d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
     acc_data = payload.get("account")
     if not acc_data:
         return jsonify({"success": False, "error": "ទិន្នន័យមិនត្រឹមត្រូវ"}), 400
@@ -1032,8 +1040,10 @@ def save_admin_account():
 @app.route('/api/admin/account/delete', methods=['POST'])
 def delete_admin_account():
     payload = request.get_json(silent=True) or {}
-    acc_id = payload.get("acc_id")
     d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
+    acc_id = payload.get("acc_id")
     d["accounts"] = [a for a in d["accounts"] if a["id"] != acc_id]
     save_data(d)
     backup_store_to_telegram(d, pin_it=True)
@@ -1065,12 +1075,9 @@ def auth_telegram():
 
     if is_new:
         msg = (
-            f"🆕 <b>សមាជិកថ្មីទើបចុះឈ្មោះលើ Website!</b>
-"
-            f"👤 ឈ្មោះ៖ {full_name}
-"
-            f"🔗 Username៖ @{username if username else 'គ្មាន'}
-"
+            f"🆕 <b>សមាជិកថ្មីទើបចុះឈ្មោះលើ Website!</b>\n"
+            f"👤 ឈ្មោះ៖ {full_name}\n"
+            f"🔗 Username៖ @{username if username else 'គ្មាន'}\n"
             f"🆔 Telegram ID៖ <code>{tg_id}</code>"
         )
         send_telegram_group(msg)
@@ -1087,7 +1094,10 @@ def get_order_history():
 
 @app.route('/api/admin/orders', methods=['POST'])
 def get_all_orders_admin():
+    payload = request.get_json(silent=True) or {}
     d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
     return jsonify({"success": True, "orders": list(reversed(d["orders"]))})
 
 @app.route('/api/order/fulfill', methods=['POST'])
@@ -1164,6 +1174,8 @@ def order_fulfill():
 def update_store():
     payload = request.get_json(silent=True) or {}
     d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
     new_data = payload.get("data")
     if new_data:
         d["banners"] = new_data.get("banners", d["banners"])
@@ -1377,68 +1389,43 @@ def check_payment():
 
             if order.get("order_type") == "ACCOUNT":
                 msg = (
-                    f"🔐 <b>លក់គណនីហ្គេមជោគជ័យ (PAID ✅)</b>
-"
-                    f"━━━━━━━━━━━━━━━━━━
-"
-                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>
-"
-                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>
-"
-                    f"🏷️ ឈ្មោះគណនី៖ <b>{order['item_name']}</b>
-"
-                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b> (ចូល ABA)
-"
-                    f"👤 អ្នកទិញ៖ {buyer_text}
-"
-                    f"📧 User/Gmail៖ <code>{order.get('delivered_login', '')}</code>
-"
+                    f"🔐 <b>លក់គណនីហ្គេមជោគជ័យ (PAID ✅)</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━\n"
+                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>\n"
+                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
+                    f"🏷️ ឈ្មោះគណនី៖ <b>{order['item_name']}</b>\n"
+                    f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b> (ចូល ABA)\n"
+                    f"👤 អ្នកទិញ៖ {buyer_text}\n"
+                    f"📧 User/Gmail៖ <code>{order.get('delivered_login', '')}</code>\n"
                     f"🔑 Password៖ <code>{order.get('delivered_password', '')}</code>"
-                    f"{seller_line}
-"
+                    f"{seller_line}\n"
                     f"⏰ ម៉ោងបង់ប្រាក់៖ {order['paid_at']}"
                 )
                 chat_notif = (
-                    f"✅ គណនីត្រូវបានទិញរួច!
-"
-                    f"• វិក្កយបត្រ: {order['bill_number']}
-"
-                    f"• ឈ្មោះគណនី: {order['item_name']}
-"
-                    f"• តម្លៃ: ${order['amount']:.2f}
-"
+                    f"✅ គណនីត្រូវបានទិញរួច!\n"
+                    f"• វិក្កយបត្រ: {order['bill_number']}\n"
+                    f"• ឈ្មោះគណនី: {order['item_name']}\n"
+                    f"• តម្លៃ: ${order['amount']:.2f}\n"
                     f"• អ្នកទិញ: {order['tg_name']}"
                 )
             else:
                 msg = (
-                    f"💰 <b>មានការបញ្ជាទិញ Item ថ្មី (PAID ✅)</b>
-"
-                    f"━━━━━━━━━━━━━━━━━━
-"
-                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>
-"
-                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>
-"
-                    f"💎 កញ្ចប់ Item៖ <b>{order['item_name']}</b>
-"
-                    f"🆔 គណនីហ្គេម៖ <code>{order['player_info']}</code>
-"
+                    f"💰 <b>មានការបញ្ជាទិញ Item ថ្មី (PAID ✅)</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━\n"
+                    f"🧾 វិក្កយបត្រ៖ <code>{order['bill_number']}</code>\n"
+                    f"🎮 ហ្គេម៖ <b>{order['game_name']}</b>\n"
+                    f"💎 កញ្ចប់ Item៖ <b>{order['item_name']}</b>\n"
+                    f"🆔 គណនីហ្គេម៖ <code>{order['player_info']}</code>\n"
                     f"💵 ទឹកប្រាក់៖ <b>${order['amount']:.2f}</b> (ចូល ABA)"
-                    f"{seller_line}
-"
-                    f"👤 អ្នកទិញ៖ {buyer_text}
-"
+                    f"{seller_line}\n"
+                    f"👤 អ្នកទិញ៖ {buyer_text}\n"
                     f"⏰ ម៉ោងបង់ប្រាក់៖ {order['paid_at']}"
                 )
                 chat_notif = (
-                    f"💎 ការបញ្ជាទិញ Item ថ្មី!
-"
-                    f"• វិក្កយបត្រ: {order['bill_number']}
-"
-                    f"• Item: {order['item_name']} (${order['amount']:.2f})
-"
-                    f"• ព័ត៌មានអ្នកទិញ: {order['player_info']}
-"
+                    f"💎 ការបញ្ជាទិញ Item ថ្មី!\n"
+                    f"• វិក្កយបត្រ: {order['bill_number']}\n"
+                    f"• Item: {order['item_name']} (${order['amount']:.2f})\n"
+                    f"• ព័ត៌មានអ្នកទិញ: {order['player_info']}\n"
                     f"• ស្ថានភាព: រង់ចាំទទួល/បដិសេធ"
                 )
 
