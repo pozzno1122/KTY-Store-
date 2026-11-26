@@ -3192,26 +3192,34 @@
         const prevText = btn ? btn.innerText : "+ បង្ហោះលក់ Item";
         if (btn) { btn.disabled = true; btn.innerText = "⏳ កំពុងបង្ហោះ..."; }
 
+        const payloadData = {
+            tg_id: String(currentUser.id),
+            tg_username: currentUser.username || "",
+            username: currentUser.username || "",
+            seller_name: "",
+            kind: "ITEM",
+            product: {
+                id: editingAdminMarketId,
+                name: name,
+                game_name: "Roblox",
+                price: price,
+                stock: stock,
+                images: uploadedAdminMarketImages
+            }
+        };
         try {
-            const res = await fetch(`${API_URL}/api/reseller/product/save`, {
+            let res = await fetch(`${API_URL}/api/admin/market-item/save`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    tg_id: String(currentUser.id),
-                    tg_username: currentUser.username || "",
-                    username: currentUser.username || "",
-                    seller_name: "",
-                    kind: "ITEM",
-                    product: {
-                        id: editingAdminMarketId,
-                        name: name,
-                        game_name: "Roblox",
-                        price: price,
-                        stock: stock,
-                        images: uploadedAdminMarketImages
-                    }
-                })
+                body: JSON.stringify(payloadData)
             });
+            if (res.status === 404) {
+                res = await fetch(`${API_URL}/api/reseller/product/save`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payloadData)
+                });
+            }
             const data = await res.json();
             if (data.success) {
                 alert("✅ បានបង្ហោះលក់ Item រួចរាល់!");
@@ -3221,6 +3229,15 @@
                 alert("⚠️ " + (data.error || "មិនអាចបង្ហោះ Item បានទេ!"));
             }
         } catch (e) {
+            try {
+                await fetchStoreData();
+                const exists = (storeData.marketplace_items || []).some(x => String(x.name || "").trim() === name);
+                if (exists) {
+                    alert("✅ បានបង្ហោះលក់ Item រួចរាល់!");
+                    cancelAdminMarketItem();
+                    return;
+                }
+            } catch (_) {}
             alert("⚠️ មិនអាចភ្ជាប់ទៅ Server ដើម្បីបង្ហោះ Item បានទេ! (" + (e && e.message ? e.message : "Failed to fetch") + ")\nServer: " + API_URL);
         } finally {
             if (btn) { btn.disabled = false; btn.innerText = prevText; }
