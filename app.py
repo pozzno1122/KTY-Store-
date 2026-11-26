@@ -769,6 +769,46 @@ def reseller_shop_toggle():
     backup_store_to_telegram(d, pin_it=True)
     return jsonify({"success": True, "shop_open": shop_open})
 
+
+@app.route('/api/admin/market-item/save', methods=['POST'])
+def save_admin_market_item_route():
+    payload = request.get_json(silent=True) or {}
+    d = load_data()
+    if not is_admin_request(d, payload):
+        return jsonify({"success": False, "error": "មានតែ @ktyofficial169 ប៉ុណ្ណោះដែលមានសិទ្ធិ!"}), 403
+    prod = payload.get("product") or {}
+    name = str(prod.get("name") or prod.get("title") or "").strip()
+    price = round(float(prod.get("price", 0)), 2)
+    stock = int(prod.get("stock", 1))
+    game_name = str(prod.get("game_name", "Roblox")).strip() or "Roblox"
+    images = (prod.get("images") or [])[:10]
+    first_img = prod.get("image") or (images[0] if images else "")
+    prod_id = prod.get("id")
+
+    if not name or price <= 0:
+        return jsonify({"success": False, "error": "សូមបំពេញឈ្មោះ និងតម្លៃ Item"}), 400
+
+    existing_idx = next((i for i, m in enumerate(d.setdefault("marketplace_items", [])) if m["id"] == prod_id), -1)
+    new_item = {
+        "id": prod_id or f"ritem_{int(time.time())}_{uuid.uuid4().hex[:4]}",
+        "name": name,
+        "game_name": game_name,
+        "price": price,
+        "stock": stock,
+        "description": str(prod.get("description", "")).strip(),
+        "image": first_img,
+        "images": images,
+        "seller_id": "",
+        "seller_name": ""
+    }
+    if existing_idx != -1:
+        d["marketplace_items"][existing_idx] = new_item
+    else:
+        d["marketplace_items"].append(new_item)
+
+    save_data(d)
+    return jsonify({"success": True, "item": new_item})
+
 @app.route('/api/reseller/product/save', methods=['POST'])
 def reseller_product_save():
     payload = request.get_json(silent=True) or {}
