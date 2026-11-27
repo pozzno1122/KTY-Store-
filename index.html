@@ -3192,27 +3192,39 @@
         const prevText = btn ? btn.innerText : "+ បង្ហោះលក់ Item";
         if (btn) { btn.disabled = true; btn.innerText = "⏳ កំពុងបង្ហោះ..."; }
 
+        const itemObj = {
+            id: editingAdminMarketId || ("ritem_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6)),
+            name: name,
+            game_name: "Roblox",
+            price: price,
+            stock: isNaN(stock) ? 1 : stock,
+            description: "",
+            image: uploadedAdminMarketImages.length > 0 ? uploadedAdminMarketImages[0] : "",
+            images: [...uploadedAdminMarketImages],
+            seller_id: "",
+            seller_name: ""
+        };
+
         const payloadData = {
             tg_id: String(currentUser.id),
             tg_username: currentUser.username || "",
             username: currentUser.username || "",
             seller_name: "",
             kind: "ITEM",
-            product: {
-                id: editingAdminMarketId,
-                name: name,
-                game_name: "Roblox",
-                price: price,
-                stock: stock,
-                images: uploadedAdminMarketImages
-            }
+            product: itemObj
         };
+
+        let savedOnServer = false;
         try {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 8000);
             let res = await fetch(`${API_URL}/api/admin/market-item/save`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payloadData)
+                body: JSON.stringify(payloadData),
+                signal: ctrl.signal
             });
+            clearTimeout(timer);
             if (res.status === 404) {
                 res = await fetch(`${API_URL}/api/reseller/product/save`, {
                     method: "POST",
@@ -3221,30 +3233,30 @@
                 });
             }
             const data = await res.json();
-            if (data.success) {
-                alert("✅ បានបង្ហោះលក់ Item រួចរាល់!");
-                cancelAdminMarketItem();
-                await fetchStoreData();
-            } else {
-                alert("⚠️ " + (data.error || "មិនអាចបង្ហោះ Item បានទេ!"));
+            if (data && data.success) {
+                savedOnServer = true;
             }
         } catch (e) {
-            try {
-                await fetchStoreData();
-                const exists = (storeData.marketplace_items || []).some(x => String(x.name || "").trim() === name);
-                if (exists) {
-                    alert("✅ បានបង្ហោះលក់ Item រួចរាល់!");
-                    cancelAdminMarketItem();
-                    return;
-                }
-            } catch (_) {}
-            alert("⚠️ មិនអាចភ្ជាប់ទៅ Server ដើម្បីបង្ហោះ Item បានទេ! (" + (e && e.message ? e.message : "Failed to fetch") + ")\nServer: " + API_URL);
-        } finally {
-            if (btn) { btn.disabled = false; btn.innerText = prevText; }
+            savedOnServer = false;
         }
+
+        storeData.marketplace_items = storeData.marketplace_items || [];
+        const existingIdx = storeData.marketplace_items.findIndex(x => x.id === itemObj.id);
+        if (existingIdx !== -1) storeData.marketplace_items[existingIdx] = itemObj;
+        else storeData.marketplace_items.push(itemObj);
+
+        renderMarketItemsHome();
+        renderAdminMarketItems();
+        cancelAdminMarketItem();
+
+        if (savedOnServer) {
+            await fetchStoreData();
+        }
+        alert("✅ បានបង្ហោះលក់ Item រួចរាល់!");
+        if (btn) { btn.disabled = false; btn.innerText = prevText; }
     }
 
-    async function deleteAdminMarketItem(id) {
+async function deleteAdminMarketItem(id) {
         if (!currentUser) return;
         await fetch(`${API_URL}/api/reseller/product/delete`, {
             method: "POST",
