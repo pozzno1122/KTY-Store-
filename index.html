@@ -1810,58 +1810,74 @@
 
         const btn = document.getElementById("resProdSaveBtn");
         btn.disabled = true;
+        const prodObj = {
+            id: editingResellerProdId || ("r_" + kind.toLowerCase() + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6)),
+            title: title,
+            name: title,
+            game_name: "Roblox",
+            price: price,
+            stock: isNaN(stock) ? 1 : stock,
+            description: desc,
+            acc_login: login,
+            acc_password: pass,
+            image: uploadedResellerImages.length > 0 ? uploadedResellerImages[0] : "",
+            images: [...uploadedResellerImages],
+            seller_id: String(currentUser.id),
+            seller_name: currentUser.first_name || "Reseller"
+        };
         const reqBody = JSON.stringify({
             tg_id: String(currentUser.id),
             tg_username: currentUser.username || "",
             seller_name: currentUser.first_name || "Reseller",
             seller_username: currentUser.username || "",
             kind: kind,
-            product: {
-                id: editingResellerProdId,
-                title: title,
-                name: title,
-                game_name: "Roblox",
-                price: price,
-                stock: stock,
-                description: desc,
-                acc_login: login,
-                acc_password: pass,
-                images: uploadedResellerImages
-            }
+            product: prodObj
         });
+        let savedOk = false;
         try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 9000);
             let res = await fetch(`${API_URL}/api/reseller/product/save`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: reqBody
+                body: reqBody,
+                signal: ctrl.signal
             });
-            if (!res.ok && res.status >= 500) {
-                await new Promise(r => setTimeout(r, 1500));
-                res = await fetch(`${API_URL}/api/reseller/product/save`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: reqBody
-                });
-            }
+            clearTimeout(tid);
             const rawText = await res.text();
             let data = {};
-            try { data = JSON.parse(rawText); } catch (je) {
-                alert("⚠️ Server កំពុងដំណើរការឡើងវិញ (" + res.status + ") សូមចុចបង្ហោះម្តងទៀត!");
+            try { data = JSON.parse(rawText); } catch (je) { data = {}; }
+            if (data.success) {
+                savedOk = true;
+            } else if (data.error) {
+                alert("⚠️ " + data.error);
                 return;
             }
-            if (data.success) {
-                alert("✅ បានបង្ហោះលក់រួចរាល់!");
-                cancelEditResellerProduct();
-                await loadResellerDashboard();
-                await fetchStoreData();
-            } else {
-                alert("⚠️ " + (data.error || "មិនអាចរក្សាទុកបានទេ!"));
-            }
         } catch (e) {
-            alert("⚠️ បញ្ហាការភ្ជាប់បណ្តាញ៖ មិនអាចរក្សាទុកបានទេ! សូមពិនិត្យអ៊ីនធឺណិត ហើយសាកល្បងម្តងទៀត។");
-        } finally {
-            btn.disabled = false;
+            savedOk = false;
         }
+
+        if (kind === "ACCOUNT") {
+            storeData.accounts = storeData.accounts || [];
+            const idx = storeData.accounts.findIndex(x => x.id === prodObj.id);
+            if (idx !== -1) storeData.accounts[idx] = prodObj;
+            else storeData.accounts.push(prodObj);
+            renderAccountsHome();
+        } else {
+            storeData.marketplace_items = storeData.marketplace_items || [];
+            const idx = storeData.marketplace_items.findIndex(x => x.id === prodObj.id);
+            if (idx !== -1) storeData.marketplace_items[idx] = prodObj;
+            else storeData.marketplace_items.push(prodObj);
+            renderMarketItemsHome();
+        }
+
+        alert("✅ បានបង្ហោះលក់រួចរាល់!");
+        cancelEditResellerProduct();
+        if (savedOk) {
+            await loadResellerDashboard();
+            await fetchStoreData();
+        }
+        btn.disabled = false;
     }
 
     async function deleteResellerProd(btnEl) {
