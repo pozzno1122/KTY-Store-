@@ -1311,11 +1311,18 @@ def create_order():
         game_name = (m_item.get("game_name") if m_item else None) or str(data.get("game_name", "Roblox")).strip() or "Roblox"
         item_name = (m_item.get("name") if m_item else None) or str(data.get("item_name", "Item")).strip() or "Item"
         player_info = f"Roblox: {roblox_user}"
-        raw_p = m_item.get("price") if m_item and m_item.get("price") is not None else data.get("price", 0)
+        req_p = data.get("price")
+        item_p = m_item.get("price") if m_item else None
+        raw_p = req_p if req_p not in (None, "") else item_p
         try:
             price_usd = float(raw_p)
         except Exception:
             price_usd = 0.0
+        if price_usd <= 0 and item_p not in (None, ""):
+            try:
+                price_usd = float(item_p)
+            except Exception:
+                pass
         seller_id = str(m_item.get("seller_id", "")) if m_item else ""
         seller_name = str(m_item.get("seller_name", "")) if m_item else ""
 
