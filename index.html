@@ -3258,12 +3258,23 @@
 
 async function deleteAdminMarketItem(id) {
         if (!currentUser) return;
-        await fetch(`${API_URL}/api/reseller/product/delete`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tg_id: String(currentUser.id), kind: "ITEM", prod_id: id })
-        });
-        await fetchStoreData();
+        if (editingAdminMarketId === id) cancelAdminMarketItem();
+        storeData.marketplace_items = (storeData.marketplace_items || []).filter(m => m.id !== id);
+        renderMarketItemsHome();
+        renderAdminMarketItems();
+        try {
+            await fetch(`${API_URL}/api/reseller/product/delete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tg_id: String(currentUser.id),
+                    tg_username: currentUser.username || "",
+                    username: currentUser.username || "",
+                    kind: "ITEM",
+                    prod_id: id
+                })
+            });
+        } catch (e) {}
     }
 
     function getImageArrForTarget(target) {
